@@ -313,6 +313,7 @@ switch (ENVIRONMENT)
 
 define('MODULEPATH', FCPATH.'modules'.DIRECTORY_SEPARATOR);
 define('ASSETPATH', FCPATH.'assets'.DIRECTORY_SEPARATOR);
+define('EXTCONFIGPATH', APPPATH.'core'.DIRECTORY_SEPARATOR); // extended config path, for testing
 
 
 /*

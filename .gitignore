@@ -27,5 +27,5 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 *.sublime-project
 
 # GoIgniter Files
-application/views/modules/*
-assets/modules/*
+/application/views/modules/*
+/assets/modules/*

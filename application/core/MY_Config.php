@@ -2,14 +2,14 @@
 
 class MY_Config extends CI_Config{
 
-	public $_config_paths =	array(APPPATH, APPPATH.'core/');
+	public $_config_paths =	array(APPPATH, EXTCONFIGPATH);
 
     public function __construct()
 	{
 
         // Modified by GoFrendi, enforce replacement from application/core/config/config.php if exists
         $config = array();
-        include APPPATH.'core/config/config.php';
+        include EXTCONFIGPATH.'config/config.php';
 		$this->config =& get_config($config);
 
 		// Set the base_url automatically if none was provided

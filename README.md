@@ -6,6 +6,10 @@ Every code works in CodeIgniter3 will also works in GoIgniter.
 
 Personally, I made this as core foundation of No-CMS 2.0
 
+# Minimum requirement
+
+* PHP 5.3, since I use `anonymous function`
+
 # Feature
 
 * HMVC with namespace
@@ -19,7 +23,8 @@ Personally, I made this as core foundation of No-CMS 2.0
 These are some files that was modified or added in GoIgniter:
 
 * `assets/`
-* `index.php` (This file is modified from CodeIgniter, please make sure to not overwrite this when you update CodeIgniter)
+* `composer.json` (This file is different from CodeIgniter's, please make sure to not overwrite this when you update CodeIgniter)
+* `index.php` (This file is different from CodeIgniter's, please make sure to not overwrite this when you update CodeIgniter)
 * `application/core/config/`
 * `application/core/go_init.php`
 * `application/core/MY_CodeIgniter.php`
