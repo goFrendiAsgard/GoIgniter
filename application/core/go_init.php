@@ -5,7 +5,11 @@ spl_autoload_register(function ($class)
     $class_parts = explode('\\', trim($class, '\\'));
 
     // Modules and App Namespace
-    if(count($class_parts) > 1 && ($class_parts[0] == 'App' || $class_parts[0] == 'Modules') )
+    if($class == 'Module_Migrator')
+    {
+        include APPPATH.'core/Module_Migrator.php';
+    }
+    else if(count($class_parts) > 1 && ($class_parts[0] == 'App' || $class_parts[0] == 'Modules') )
     {
         $classPrefix = $class_parts[0];
         $class_parts = array_slice($class_parts, 1);
@@ -300,7 +304,7 @@ if(!function_exists('run_module_controller'))
                 echo $result;
             }
         }
-        else if(count($url_parts) > 1 && $url_parts[0] != $url_parts[1] && in_array($url_parts[0], $available_modules))
+        else if((count($url_parts) == 1 || (count($url_parts) > 1 && $url_parts[0] != $url_parts[1])) && in_array($url_parts[0], $available_modules))
         {
             // case when url is blog/index, which should be corelated to blog/blog/index
             $url = $module . '/' . $url;
@@ -331,5 +335,20 @@ if(!function_exists('asset_url'))
         }
 
         return get_instance()->config->asset_url($uri, $protocol);
+    }
+}
+
+if(!function_exists('cache_module_assets'))
+{
+    function cache_module_assets($module)
+    {
+        if(in_array($module, get_available_modules()))
+        {
+            $original_path = MODULEPATH . $module . DIRECTORY_SEPARATOR . 'assets';
+            if(file_exists($original_path))
+            {
+                rcopy($original_path, ASSETPATH . 'modules' . DIRECTORY_SEPARATOR . $module);
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 # GoIgniter
 
-An attempt to extends CodeIgniter3 without making it too funky. You can play around with it before CodeIgniter4 is ready, and you can still play around with it after CodeIgniter4 is ready. By using GoIgniter, you can do cool stuff without breaking your current working code.
+An attempt to extend CodeIgniter3 without making it too funky. You can play around with it before CodeIgniter4 is ready, and you can still play around with it after CodeIgniter4 is ready. By using GoIgniter, you can do cool stuff without breaking your current working code.
 
 Every code works in CodeIgniter3 will also works in GoIgniter.
 
@@ -9,6 +9,12 @@ Personally, I made this as core foundation of No-CMS 2.0
 # Minimum requirement
 
 * PHP 5.3, since I use `anonymous function`
+
+
+# How to start
+
+* If you use xampp, put this on `C:\xampp\htdocs`, open your browser, and type this url: `http://localhost/GoIgniter`
+* If you want to use php's default server, type `php amigo.php serve` in your terminal, open your browser, and type this url: `http://localhost:8080`
 
 # Feature
 
@@ -27,8 +33,10 @@ These are some files that was modified or added in GoIgniter:
 * `index.php` (This file is different from CodeIgniter's, please make sure to not overwrite this when you update CodeIgniter)
 * `application/core/config/`
 * `application/core/go_init.php`
+* `application/core/Module_Migrator.php`
 * `application/core/MY_CodeIgniter.php`
 * `application/core/MY_Config.php`
+* `application/core/MY_Loader.php`
 * `application/core/MY_Router.php`
 * `application/core/Go_Model.php`
 * `application/views/modules/`
@@ -73,7 +81,7 @@ First, look at the controller. Pretty similar to normal CodeIgniter's. But as ma
 Also, now you do `$model = new \Modules\Test\Models\MyModel();` instead of `$this->load->model('mymodel');`. This is also a good practice. Err, actually no, the best practice is this:
 
 ```php
-    <?php
+    <?php // file location: modules/test/controllers/Mycontroller.php
     namespace Modules\Test\Controllers;
     use \Modules\Test\Models\MyModel as Model;
 
@@ -95,7 +103,8 @@ Too much changes? Don't worry, try to put any model, view, and controller in you
 
 That's cool, but you will see something cooler in the `view`.
 
-```php
+```php 
+<!-- file location: modules/test/views/MyView.php -->
 <h1>Hello world</h1>
 <h2><?=$date?></h2>
 <?php 
@@ -140,18 +149,97 @@ For example, I try to access this url `http://localtest.me/GoIgniter/index.php/t
 
 Firstly, `$_GET["food"]` contains `pancake`. But when you call `test/mycontroller/harambe/run?food=banana`, `$_GET["food"]` is changed to `banana`. Later, when you run `var_dump($_GET)`, it will give you a `pancake`.
 
+# Per Module Migration
+
+CodeIgniter was built with single MVC in mind. While this make things simple, sometime, we really need to separate our codes into several modules. When it come to database migration, it should works the same way. In GoIgniter, you can perform per-module-migration by doing this:
+
+```php
+    <?php // file location: modules/test/controllers/Test_migration
+    namespace Modules\Test\Controllers;
+
+    use \Module_Migrator;
+    class Test_migration extends \CI_Controller
+    {
+        function index()
+        {
+            $migrator = new Module_Migrator();
+            $migrator->migrate();
+            // you can also do this:
+            // $migrator->migrate('current', array('test' => 0, 'cms' => '20161030'))
+            // This will only migrate test to version 0, and cms to version 20161030
+        }
+    }
+```
+
+# Extended Configuration
+
+In GoIgniter, you can extend CodeIgniter's configuration by creating `application/core/config/config.php`.
+While this is not as convenient as `.env` in CodeIgniter4 or Laravel, this can help you a lot. Since `config.php` is just another php script, I can do everything here. Load an independent json file seems to be more convenient than put your configuration in `application/config/` and accidentally overwrite it...
+
+```php
+    <?php defined('BASEPATH') OR exit('No direct script access allowed');
+
+    // This was created by cms module's Genesis 
+    $_cms_config_file = MODULEPATH.'cms/json/configuration.json';
+    if(file_exists($_cms_config_file))
+    {
+        $_json = file_get_contents($_cms_config_file);
+        $_cms_config = json_decode($_json, TRUE);
+        foreach($_cms_config as $key=>$val)
+        {
+            $config[$key] = $val;
+        }
+    }
+```
+
+Two new keys are introduced in extended configuration:
+
+* `$config['hostname']`
+* `$config['asset_url']` 
+
+Also, you can extend database configuration here, by doing something like:
+
+* `$config['db.default.database'] = 'tests';` As, you've notice, `default` is database active group.
+
+Not only database, you can also overwrite all codeigniter's library's configuration here. For example you want to change `migration_table` into `'cms_migration'`. Here is how you do that: `$config['migration.migration_table'] = 'cms_migration';`
+
+# Constants
+
+Three new constants are introduced in GoIgniter.
+
+* MODULEPATH
+* ASSETPATH
+* EXTCONFIGPATH
+
+You can change the values by editing `index.php`
+
+
+# Always loaded functions
+
+These functions are always available, either in models, views, or controllers
+
+* asset_url($url = '', $protocol = NULL)
+* cache_file($src_file, $dst_file) 
+* rcopy($src, $dst)
+* get_available_modules()
+* helper($helpers = array())
+* view($view, $data = array(), $return = FALSE)
+* run_module_controller($url, $return = FALSE)
+* cache_module_asset($modules)
+
 # Soon to be added
 
+* Multiple Migration
+* CMS Module
 * Amigo (kind of Artisan in Laravel)
-* Unit testing
-* ConfigMaker
-* DB Migration
+* Unit testing (Failed)
+* DB Migration (No need, just use CodeIgniter's, but make it support multiple migration)
 * CodeIgniter4 like Model & Entity
 * Multisite
 * Laravel's like blade engine
 
 # The bad things
 
-* I made `application\views\modules\` to cache the original view. Whenever original view updated, and someone access the url, the cache will be updated. This is good, and I also check modification time of the file, so there is no unnecessary `write-to-disk` operation. But it surely add several micro seconds to response time.
+* I made `application\views\modules\` to cache the original view. Whenever original view updated, and someone access the url, the cache will be updated. This is good, and I also check modification time of the file, so there is no unnecessary `write-to-disk` operation. But it surely add several micro seconds to response time. The same mechanism also works for asset (static file) management.
 
 * There might be some 'reinventing-the-wheel' thing here.

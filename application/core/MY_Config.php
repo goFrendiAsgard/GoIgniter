@@ -9,7 +9,11 @@ class MY_Config extends CI_Config{
 
         // Modified by GoFrendi, enforce replacement from application/core/config/config.php if exists
         $config = array();
-        include EXTCONFIGPATH.'config/config.php';
+        $config_file = EXTCONFIGPATH.'config/config.php';
+        if(file_exists($config_file) && is_readable($config_file))
+        {
+            include $config_file;
+        }
 		$this->config =& get_config($config);
 
 		// Set the base_url automatically if none was provided
@@ -19,7 +23,8 @@ class MY_Config extends CI_Config{
             if (isset($_SERVER['SERVER_NAME']))
             {
                 $server_addr = $_SERVER['SERVER_NAME'];
-				$base_url = (is_https() ? 'https' : 'http').'://'.$server_addr
+                $base_url = (is_https() ? 'https' : 'http').'://'.$server_addr
+                    .(isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] != '80'? ':'.$_SERVER['SERVER_PORT'] : '')
 					.substr($_SERVER['SCRIPT_NAME'], 0, strpos($_SERVER['SCRIPT_NAME'], basename($_SERVER['SCRIPT_FILENAME'])));
             }
             else if (isset($_SERVER['SERVER_ADDR']))

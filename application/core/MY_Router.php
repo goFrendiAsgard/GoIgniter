@@ -67,6 +67,7 @@ class MY_Router extends CI_Router{
 		else 
 		{
 			/* load config or language array */
+            var_dump($location);
 			include $location;
 
 			if ( ! isset($$type) OR ! is_array($$type))				
