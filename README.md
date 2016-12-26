@@ -19,7 +19,7 @@ Personally, I made this as core foundation of No-CMS 2.0
 These are some files that was modified or added in GoIgniter:
 
 * `assets/`
-* `index.php`
+* `index.php` (This file is modified from CodeIgniter, please make sure to not overwrite this when you update CodeIgniter)
 * `application/core/config/`
 * `application/core/go_init.php`
 * `application/core/MY_CodeIgniter.php`
@@ -60,9 +60,9 @@ GoIgniter let you have HMVC structure without using HMVC Plugin, However the HMV
     }
 ```
 
-First, look at the controller. Pretty similar to normal CodeIgniter's. But as many cool PHP framework out there, here, you should use `namespace`. At first, this might looks like an extra works, but this will gives you at least two advantage:
+First, look at the controller. Pretty similar to normal CodeIgniter's. But as many cool PHP framework out there, here, you should use `namespace`. At first, this might looks like an extra works, but this will gives you at least two advantages:
 
-* You no longer need to worry about class colition
+* You no longer need to worry about class collision
 * Switching to other cool framework out there (laravel, symfony, codeigniter4, etc) will be easier
 
 Also, now you do `$model = new \Modules\Test\Models\MyModel();` instead of `$this->load->model('mymodel');`. This is also a good practice. Err, actually no, the best practice is this:
@@ -82,7 +82,7 @@ Also, now you do `$model = new \Modules\Test\Models\MyModel();` instead of `$thi
 
 ```
 
-This make things more explicit, as well as avoiding class colition. And if you don't want to change your coding style too much, you can also use this `$this->model = new Model();`.
+This make things more explicit, as well as avoiding class collision. And if you don't want to change your coding style too much, you can also use this `$this->model = new Model();`.
 
 If you take a closer look, you will also notice, that we now use `helper('helper_name')` and `view('view_name')` instead of `$this->load->helper('helper_name')` and `$this->load->view('view_name')`. 
 
@@ -137,10 +137,13 @@ Firstly, `$_GET["food"]` contains `pancake`. But when you call `test/mycontrolle
 
 # Soon to be added
 
+* Amigo (kind of Artisan in Laravel)
+* Unit testing
+* ConfigMaker
+* DB Migration
 * CodeIgniter4 like Model & Entity
 * Multisite
 * Laravel's like blade engine
-* Unit testing
 
 # The bad things
 

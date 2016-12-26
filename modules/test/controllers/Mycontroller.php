@@ -1,10 +1,12 @@
 <?php
 namespace Modules\Test\Controllers;
 
+use \Modules\Test\Models\MyModel;
+
 class Mycontroller extends \CI_Controller{
 
     function index(){
-        $model = new \Modules\Test\Models\MyModel();
+        $model = new MyModel();
         helper('test/date');
         $data = array(
             'articles' => $model->get_data(),
