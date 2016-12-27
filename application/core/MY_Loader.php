@@ -80,7 +80,6 @@ class MY_Loader extends CI_Loader
 
             // set params
             $params = $db[$active_group];
-            var_dump($params);
         }
         return parent::database($params, $return, $query_builder);
     }

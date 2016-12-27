@@ -12,6 +12,8 @@ class Genesis extends \CI_Model
     // configuration values
     protected $_configs = array();
 
+    protected $database = NULL;
+
     // constructor
     public function __construct()
     {
@@ -74,14 +76,14 @@ class Genesis extends \CI_Model
             }
         }
         // surpress any error, we test connection's validity by using is_db_valid
-        $db = @$this->load->database($config, TRUE);
-        return $db;
+        $this->database = @$this->load->database($config, TRUE);
+        return $this->database;
     }
 
     public function is_db_valid()
     {
-        $db = $this->load_db();
-        return $db->conn_id != FALSE;
+        $this->load_db();
+        return $this->database->conn_id != FALSE;
     }
 
     public function setup()
@@ -104,6 +106,18 @@ class Genesis extends \CI_Model
                         opcache_invalidate($cms_config_file);
                         opcache_invalidate($ext_config_file);
                     }
+
+                    // unset any previously created $CI->db
+		            $CI =& get_instance();
+                    unset($CI->db);
+
+                    // reload database with newly created configuration
+                    $this->load->database();
+
+                    // prepare migration
+                    $module_migrator = new \Module_Migrator();
+                    $module_migrator->migrate('cms');
+
                     return TRUE;
                 }
 

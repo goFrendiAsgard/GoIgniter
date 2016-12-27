@@ -163,9 +163,9 @@ CodeIgniter was built with single MVC in mind. While this make things simple, so
         function index()
         {
             $migrator = new Module_Migrator();
-            $migrator->migrate();
+            $migrator->migrate_all();
             // you can also do this:
-            // $migrator->migrate('current', array('test' => 0, 'cms' => '20161030'))
+            // $migrator->migrate_all('current', array('test' => 0, 'cms' => '20161030'))
             // This will only migrate test to version 0, and cms to version 20161030
         }
     }

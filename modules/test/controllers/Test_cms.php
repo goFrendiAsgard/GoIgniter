@@ -46,7 +46,8 @@ class Test_cms extends \CI_Controller
 
         echo '<h4>Try Module_Migrator</h4>';
         $migrator = new Module_Migrator();
-        $migrator->migrate();
+        $migrator->migrate_all();
+        var_dump($migrator->get_error());
     }
 
 

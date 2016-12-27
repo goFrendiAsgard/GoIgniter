@@ -4,10 +4,12 @@ spl_autoload_register(function ($class)
 {
     $class_parts = explode('\\', trim($class, '\\'));
 
+    $core_classes = array('Module_Migrator', 'Site_Detector');
+
     // Modules and App Namespace
-    if($class == 'Module_Migrator')
+    if(in_array($class, $core_classes))
     {
-        include APPPATH.'core/Module_Migrator.php';
+        include APPPATH.'core/'.$class.'.php';
     }
     else if(count($class_parts) > 1 && ($class_parts[0] == 'App' || $class_parts[0] == 'Modules') )
     {

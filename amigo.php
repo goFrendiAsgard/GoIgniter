@@ -32,22 +32,32 @@ function get_array_value($array, $index, $default_value = NULL)
     }
 }
 
-function show_help()
+function show_help($amigo_name)
 {
-    $amigo = $argv[0];
-    $message = 
-        "USAGE :" . PHP_EOL .
+    $message = "USAGE:" . PHP_EOL .
         "* Help" . PHP_EOL .
-        "   php $amigo help" . PHP_EOL .
-        "* Run server" . PHP_EOL .
-        "   php $amigo serve [server [port]]";
+        "   php $amigo_name help" . PHP_EOL;
+
+    foreach(glob(__DIR__.'/amigo/*.php') as $file)
+    {
+        include_once($file);
+        $class = basename($file);
+        $class_parts = explode('.', $class);
+        $class = $class_parts[0];
+        $obj =  new $class();
+        $description = $obj->description;
+        $parameter = $obj->parameter;
+        $command = lcfirst($class);
+        $message .= "* $description" . PHP_EOL;
+        $message .= "   php $amigo_name $command $parameter".PHP_EOL;
+    }
 
     outln($message);
 }
 
 if($argc == 1 || ($argc == 2 && $argv[1] == "help"))
 {
-    show_help();
+    show_help($argv[0]);
 }
 else if($argc == 2 && $argv[1] == "?")
 {
@@ -55,17 +65,27 @@ else if($argc == 2 && $argv[1] == "?")
     outln(" No, you are not, I don't know who you are. And I'm not `Go` too. I am Amigo, a simple PHP CLI program.");
     outln(" `Go` is the programmer who made me.");
     outln(" You can stalk his github on https://github.com/goFrendiAsgard");
-    show_help();
+    show_help($argv[0]);
 }
 else if($argc > 1)
 {
     $command = $argv[1];
-    $arguments = array_slice($argv, 2);
-    // run the class
     $class = ucfirst($command);
-    require_once(__DIR__ .'/amigo/'.$class.'.php');
-    $obj =  new $class();
-    $obj->run($arguments);
+    $file_name = __DIR__.'/amigo/'.$class.'.php';
+    if(file_exists($file_name) && is_readable($file_name))
+    {
+        $arguments = array_slice($argv, 2);
+        // run the class
+        $class = ucfirst($command);
+        include_once($file_name);
+        $obj =  new $class();
+        $obj->run($arguments);
+    }
+    else
+    {
+        outln("Invalid command `$command`");
+        show_help($argv[0]);
+    }
 }
 else
 {
