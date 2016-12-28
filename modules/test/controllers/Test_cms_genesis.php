@@ -2,6 +2,7 @@
 namespace Modules\Test\Controllers;
 
 use \Modules\Cms\Models\Genesis;
+
 class Test_cms_genesis extends \CI_Controller
 {
 

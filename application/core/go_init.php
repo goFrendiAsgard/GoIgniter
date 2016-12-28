@@ -4,7 +4,7 @@ spl_autoload_register(function ($class)
 {
     $class_parts = explode('\\', trim($class, '\\'));
 
-    $core_classes = array('Module_Migrator', 'Site_Detector');
+    $core_classes = array('Module_Migrator', 'Site');
 
     // Modules and App Namespace
     if(in_array($class, $core_classes))

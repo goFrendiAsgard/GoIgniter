@@ -6,17 +6,28 @@ class MY_Loader extends CI_Loader
     public function get_library_config($file)
     {
         // include library's configuration file
-        if ( !file_exists($file_path = APPPATH.'config/'.ENVIRONMENT.'/'.$file.'.php') && !file_exists($file_path = APPPATH.'config/'.$file.'.php'))
+        $file_paths = array(
+            APPPATH.'config/'.$file.'.php',
+            APPPATH.'config/'.ENVIRONMENT.'/'.$file.'.php'
+        );
+
+        // assemble original_config
+        $original_config = array();
+        foreach($file_paths as $file_path)
         {
-            show_error('The configuration file '.$file.'.php does not exist.');
+            if(file_exists($file_path) && is_readable($file_path))
+            {
+                unset($config);
+                include($file_path);
+                if(isset($config))
+                {
+                    foreach($config as $key => $val)
+                    {
+                        $original_config[$key] = $val;
+                    }
+                }
+            }
         }
-        if(!is_readable($file_path))
-        {
-            show_error('The configuration file '.$file.'.php is not readable.');
-        }
-        $config = array();
-        include($file_path);
-        $original_config = $config;
 
         // include ext config file
         $config = array();

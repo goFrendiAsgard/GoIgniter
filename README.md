@@ -1,10 +1,28 @@
 # GoIgniter
 
-An attempt to extend CodeIgniter3 without making it too funky. You can play around with it before CodeIgniter4 is ready, and you can still play around with it after CodeIgniter4 is ready. By using GoIgniter, you can do cool stuff without breaking your current working code.
+An attempt to extend CodeIgniter3 without breaking all the good things. You can play around with it before CodeIgniter4 is ready, and you can still play around with it after CodeIgniter4 is ready. By using GoIgniter, you can do cool stuff without breaking your current working code.
 
 Every code works in CodeIgniter3 will also works in GoIgniter.
 
 Personally, I made this as core foundation of No-CMS 2.0
+
+# Philosophy
+
+* Perfection is simply never exists.
+
+    CodeIgniter3 is doing it right by supporting migration. In fact, it is almost impossible to write a script that is 100% working without any attempt to fix it later. Instead of trying to do so, build the simplest part possible, and gradually scale it.
+
+* If something is not broken, don't fix it, and don't throw it away just to be cool.
+
+    CodeIgniter3 is stable enough. Some new technologies such as namespace might not be used extensively. The `$this->load->model()` might be ugly, but it has work since 2010, so let it be.
+
+* If something is broken, find out which part of the thing is actually broken, and fix/improve it.
+
+    If your old comfortable car is rusty and outdated, you will fix the broken parts and add `Jarvis` on it, instead of buy a new expensive car, and spend some times to learn all the new things.
+
+* Do as little changes as possible, and only do it when necessary.
+
+    You are lazy, it is good, and keep it that way :)
 
 # Minimum requirement
 
@@ -14,7 +32,7 @@ Personally, I made this as core foundation of No-CMS 2.0
 # How to start
 
 * If you use xampp, put this on `C:\xampp\htdocs`, open your browser, and type this url: `http://localhost/GoIgniter`
-* If you want to use php's default server, type `php amigo.php serve` in your terminal, open your browser, and type this url: `http://localhost:8080`
+* If you want to use php's default server, type `php amigo serve` in your terminal, open your browser, and type this url: `http://localhost:8080`
 
 # Feature
 
@@ -202,6 +220,11 @@ Also, you can extend database configuration here, by doing something like:
 * `$config['db.default.database'] = 'tests';` As, you've notice, `default` is database active group.
 
 Not only database, you can also overwrite all codeigniter's library's configuration here. For example you want to change `migration_table` into `'cms_migration'`. Here is how you do that: `$config['migration.migration_table'] = 'cms_migration';`
+
+# Extended Route
+
+In GoIgniter, you can also extend CodeIgniter's routing by creating `application/core/config/routes.php`.
+This will override any route configuration defined in `application/config/routes.php`.
 
 # Constants
 

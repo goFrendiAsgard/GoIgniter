@@ -29,3 +29,8 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 # GoIgniter Files
 /application/views/modules/*
 /assets/modules/*
+/application/controllers/Welcome.php
+/application/modules/cms/.mutation
+/application/modules/cms/.genesis
+/application/modules/cms/mutation_backup/*.php
+

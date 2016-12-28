@@ -5,7 +5,8 @@ class Serve{
 
     public $parameter = "[server [port]]";
 
-    function run($arguments = array()){
+    public function run($arguments = array())
+    {
         $server = get_array_value($arguments, 0, 'localhost');
         $port = get_array_value($arguments, 1, '8080');
         $php = PHP_BINARY;

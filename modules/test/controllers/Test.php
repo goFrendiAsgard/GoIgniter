@@ -1,15 +1,33 @@
 <?php
 namespace Modules\Test\Controllers;
 
+use \Modules\Test\Models\MyModel;
 class Test extends \CI_Controller
 {
-    public function index()
+    function index()
     {
-        echo 'run <i>test</i> or <i>test/index</i>';
+        $model = new MyModel();
+        helper('test/date');
+        $data = array(
+            'articles' => $model->get_data(),
+            'date'     => get_date()
+        );
+        view('test/MyView', $data);
     }
 
-    public function ok()
+    function harambe($act)
+    {
+        echo 'All hail harambe !!!'.PHP_EOL;
+        echo 'Harambe is '.$act;
+        if(isset($_GET['food']))
+        {
+            echo PHP_EOL . 'Give ' . $_GET['food'] . ' to harambe';
+        }
+    }
+
+    function ok()
     {
         echo 'run <i>test/ok</i>';
     }
+
 }

@@ -38,7 +38,7 @@ function show_help($amigo_name)
         "* Help" . PHP_EOL .
         "   php $amigo_name help" . PHP_EOL;
 
-    foreach(glob(__DIR__.'/amigo/*.php') as $file)
+    foreach(glob(__DIR__.'/amigo_res/*.php') as $file)
     {
         include_once($file);
         $class = basename($file);
@@ -71,7 +71,7 @@ else if($argc > 1)
 {
     $command = $argv[1];
     $class = ucfirst($command);
-    $file_name = __DIR__.'/amigo/'.$class.'.php';
+    $file_name = __DIR__.'/amigo_res/'.$class.'.php';
     if(file_exists($file_name) && is_readable($file_name))
     {
         $arguments = array_slice($argv, 2);

@@ -374,8 +374,6 @@ if ( ! is_php('5.4'))
 	// Set a mark point for benchmarking
 	$BM->mark('loading_time:_base_classes_end');
 
-    
-
 /*
  * ------------------------------------------------------
  *  Sanity checks

@@ -1,10 +1,13 @@
 <?php
 namespace Modules\Cms\Models;
 
+use \Modules\Cms\Mutator;
+
 class Genesis extends \CI_Model
 {
-    // TRUE if configuration.json exists
-    protected static $_is_set;
+
+    // mark file
+    protected $_mark_file = '';
 
     // The configuration file, set on construct
     protected $_config_file = '';
@@ -12,11 +15,12 @@ class Genesis extends \CI_Model
     // configuration values
     protected $_configs = array();
 
-    protected $database = NULL;
+    protected $_database = NULL;
 
     // constructor
     public function __construct()
     {
+        $this->_mark_file = MODULEPATH.'cms/.genesis';
         $this->_config_file = MODULEPATH.'cms/configs/configuration.json';
         if(self::$_is_set === NULL)
         {
@@ -62,7 +66,7 @@ class Genesis extends \CI_Model
 
     public function is_set()
     {
-        return self::$_is_set;
+        return file_exists($this->_mark_file);
     }
 
     public function load_db()
@@ -76,52 +80,58 @@ class Genesis extends \CI_Model
             }
         }
         // surpress any error, we test connection's validity by using is_db_valid
-        $this->database = @$this->load->database($config, TRUE);
-        return $this->database;
+        $this->_database = @$this->load->database($config, TRUE);
+        return $this->_database;
     }
 
     public function is_db_valid()
     {
         $this->load_db();
-        return $this->database->conn_id != FALSE;
+        return $this->_database->conn_id != FALSE;
     }
 
     public function setup()
     {
         if(!$this->is_set() && $this->is_db_valid())
         {
-            // write exta config
-            $ext_config_file = EXTCONFIGPATH.'config/config.php';
-            if( !file_exists($ext_config_file) && is_writable(dirname($ext_config_file)) )
+            // summon mutation
+            $mutator = new Mutator();
+            if(!$mutator->is_mutation_performed())
             {
-                file_put_contents($ext_config_file, file_get_contents(MODULEPATH.'cms/res/config.php'));
-
-                // write cms config
-                $cms_config_file = MODULEPATH.'cms/json/configuration.json';
-                if(is_writable(dirname($cms_config_file)))
+                $mutation_success = $mutator->do_mutation();
+                if(!$mutation_success)
                 {
-                    file_put_contents($cms_config_file, json_encode($this->_configs));
-                    if(function_exists('opcache_invalidate'))
-                    {
-                        opcache_invalidate($cms_config_file);
-                        opcache_invalidate($ext_config_file);
-                    }
+                    return FALSE;
+                }
+            }
 
-                    // unset any previously created $CI->db
-		            $CI =& get_instance();
-                    unset($CI->db);
-
-                    // reload database with newly created configuration
-                    $this->load->database();
-
-                    // prepare migration
-                    $module_migrator = new \Module_Migrator();
-                    $module_migrator->migrate('cms');
-
-                    return TRUE;
+            // write cms config
+            $cms_config_file = MODULEPATH.'cms/json/configuration.json';
+            if(is_writable(dirname($cms_config_file)))
+            {
+                file_put_contents($cms_config_file, json_encode($this->_configs));
+                if(function_exists('opcache_invalidate'))
+                {
+                    opcache_invalidate($cms_config_file);
+                    opcache_invalidate($ext_config_file);
                 }
 
+                // unset any previously created $CI->db
+                $CI =& get_instance();
+                unset($CI->db);
+
+                // reload database with newly created configuration
+                $this->load->database();
+
+                // prepare migration
+                $module_migrator = new \Module_Migrator();
+                $module_migrator->migrate('cms');
+
+                file_put_contents($this->_mark_file, 'Genesis set on ' . date('Y-m-d H:i:s'));
+
+                return TRUE;
             }
+
         }
         return FALSE;
     }
