@@ -30,7 +30,10 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 /application/views/modules/*
 /assets/modules/*
 /application/controllers/Welcome.php
-/application/modules/cms/.mutation
-/application/modules/cms/.genesis
-/application/modules/cms/mutation_backup/*.php
-
+/application/core/config/config.php
+/application/core/config/routes.php
+/application/core/config/sites/alias*
+/application/core/config/sites/dict.json
+/modules/cms/.mutation
+/modules/cms/.genesis
+/modules/cms/mutation_backup/*.php
