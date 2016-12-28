@@ -36,4 +36,4 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 /application/core/config/sites/dict.json
 /modules/cms/.mutation
 /modules/cms/.genesis
-/modules/cms/mutation_backup/*.php
+/modules/cms/mutation_backup/*.php.bak
