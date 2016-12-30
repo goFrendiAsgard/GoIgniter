@@ -1,4 +1,4 @@
-<?php
+<?php defined('BASEPATH') OR exit('No direct script access allowed');
 
 spl_autoload_register(function ($class)
 {
@@ -27,7 +27,7 @@ spl_autoload_register(function ($class)
 
         if(file_exists($file_name) && is_readable($file_name))
         {
-            include($file_name);
+            require_once($file_name);
         }
     }
     else
@@ -38,7 +38,7 @@ spl_autoload_register(function ($class)
             $file_name = BASEPATH . 'core/' . substr($class,3) . '.php';
             if(file_exists($file_name) && is_readable($file_name))
             {
-                include($file_name);
+                require_once($file_name);
             }
         }
         // Core classes
@@ -47,7 +47,7 @@ spl_autoload_register(function ($class)
             $file_name = APPPATH . 'core/' . $class . '.php';
             if(file_exists($file_name) && is_readable($file_name))
             {
-                include($file_name);
+                require_once($file_name);
             }
         }
     }
@@ -55,61 +55,75 @@ spl_autoload_register(function ($class)
 });
 
 
-if(!function_exists('cache_file'))
+if(!function_exists('cache_resource'))
 {
-    function cache_file($original_file_name, $cached_file_name)
+    function cache_resource($src, $dst)
     {
-        // if original_file exists, and cached_file not exists or not up to date, then copy original_file to cache_file
-        if(file_exists($original_file_name))
+        // we cannot cache something that is not exists
+        if(!file_exists($src)) return FALSE;
+
+        // get path
+        $dst_path_parts = explode(DIRECTORY_SEPARATOR, $dst);
+        array_pop($dst_path_parts);
+
+        // look for inexisting directories in the path
+        $test_count = count($dst_path_parts);
+        while(!file_exists(implode(DIRECTORY_SEPARATOR, array_slice($dst_path_parts, 0, $test_count))))
         {
-            if(!file_exists($cached_file_name) || (file_exists($cached_file_name) && date('YmdHis', filemtime($cached_file_name)) < date('YmdHis', filemtime($original_file_name))))
-            {
-
-                // create subdirectory
-                $path_parts = explode(DIRECTORY_SEPARATOR, $cached_file_name);
-                for($i=1; $i<count($path_parts); $i++)
-                {
-                    $sub_path = implode(DIRECTORY_SEPARATOR, array_slice($path_parts, 0, $i));
-                    file_exists($sub_path) || @mkdir($sub_path);
-                }
-
-                // cache file
-                @copy($original_file_name, $cached_file_name);
-            }
+            $test_count --;
         }
-        return file_exists($cached_file_name);
+
+        // create all inexisting directories
+        while($test_count < count($dst_path_parts))
+        {
+            @mkdir(implode(DIRECTORY_SEPARATOR, array_slice($dst_path_parts, 0, $test_count+1)));
+            $test_count ++;
+        }
+
+        // The cached file is directory
+        if(is_dir($src))
+        {
+            // create $dst if it is not exist
+            file_exists($dst) || @mkdir($dst);
+
+            // call this function again recursively for each files/directories inside $src
+            $dir = opendir($src);
+            while(false !== ( $file = readdir($dir)) )
+            {
+                if ($file=='.' || $file=='..')
+                {
+                    continue;
+                }
+                cache_resource($src . DIRECTORY_SEPARATOR . $file,
+                    $dst . DIRECTORY_SEPARATOR . $file);
+            }
+            closedir($dir);
+
+        }
+        else if(!file_exists($dst) || (file_exists($dst) && date('YmdHis', filemtime($dst)) < date('YmdHis', filemtime($src))))
+        {
+            // cache file
+            @copy($src, $dst);
+        }
+        return TRUE;
     }
 }
 
-if(!function_exists('rcopy'))
-{
-    function rcopy($src, $dst)
-    {
-        $dir = opendir($src);
-        if(!file_exists($dst))
-        {
-            @mkdir($dst);
-        }
 
-        while(false !== ( $file = readdir($dir)) )
+if(!function_exists('cache_modules'))
+{
+    function cache_modules()
+    {
+        foreach(get_available_modules() as $module)
         {
-            if (( $file != '.' ) && ( $file != '..' ))
-            {
-                if ( is_dir($src . DIRECTORY_SEPARATOR . $file) )
-                {
-                    rcopy($src . DIRECTORY_SEPARATOR . $file, 
-                        $dst . DIRECTORY_SEPARATOR . $file);
-                }
-                else
-                {
-                    copy($src . DIRECTORY_SEPARATOR . $file, 
-                        $dst . DIRECTORY_SEPARATOR . $file);
-                }
-            }
+            // cache the view
+            cache_resource(MODULEPATH.$module.'/views', APPPATH.'views/modules/'.$module);
+            // cache the assets
+            cache_resource(MODULEPATH.$module.'/assets', ASSETPATH.'modules/'.$module);
         }
-        closedir($dir);
     }
 }
+
 
 if(!function_exists('get_available_modules'))
 {
@@ -148,7 +162,7 @@ if(!function_exists('helper'))
                 $file_name = MODULEPATH . $moduleName . '/helpers/' . implode('/', $file_name_parts) . '_helper.php';
                 if(file_exists($file_name) && is_readable($file_name))
                 {
-                    include($file_name);
+                    require_once($file_name);
                     $found = TRUE;
                 }
             }
@@ -157,7 +171,7 @@ if(!function_exists('helper'))
             $file_name = APPPATH . 'helpers/' . $helper . '_helper.php';
             if(file_exists($file_name) && is_readable($file_name))
             {
-                include($file_name);
+                require_once($file_name);
                 $found = TRUE;
             }
 
@@ -165,7 +179,7 @@ if(!function_exists('helper'))
             $file_name = BASEPATH . 'helpers/' . $helper . '_helper.php';
             if(file_exists($file_name) && is_readable($file_name))
             {
-                include($file_name);
+                require_once($file_name);
                 $found = TRUE;
             }
 
@@ -178,6 +192,7 @@ if(!function_exists('view'))
 {
     function view($view, $vars = array(), $return = FALSE)
     {
+        cache_modules();
         $view = trim($view, '.php') . '.php';
         $view_parts = explode('/', $view);
 
@@ -188,9 +203,6 @@ if(!function_exists('view'))
             $file_name = MODULEPATH . $view_parts[0] . '/views/' . implode('/', array_slice($view_parts, 1));
             if(file_exists($file_name) && is_readable($file_name)){
                 $cached_file_name = VIEWPATH . 'modules/' . implode('/', $view_parts);
-
-                // cache the file
-                cache_file($file_name, $cached_file_name);
 
                 $found = file_exists($cached_file_name);
 
@@ -219,6 +231,66 @@ if(!function_exists('view'))
 }
 
 
+if(!function_exists('asset_url'))
+{
+    function asset_url($uri = '', $protocol = NULL)
+    {
+        cache_modules();
+        $uri_parts = explode('/', $uri);
+        if( count($uri_parts) > 1 && in_array($uri_parts[0], get_available_modules()) )
+        {
+            $module = $uri_parts[0];
+            $uri = 'modules/' . $module . '/' . implode('/', array_slice($uri_parts, 1));
+        }
+
+        // in case of MY_Config never initialiezed, init MY_Config so that it will be cached
+        if(empty(get_instance()->config->base_url()))
+        {
+            include_once(APPPATH.'core/MY_Config.php');
+            new MY_Config();
+        }
+        return get_instance()->config->asset_url($uri, $protocol);
+    }
+}
+
+if(!function_exists('base_url'))
+{
+    function base_url($uri = '', $protocol = NULL)
+    {
+        // in case of MY_Config never initialiezed, init MY_Config so that it will be cached
+        if(empty(get_instance()->config->base_url()))
+        {
+            include_once(APPPATH.'core/MY_Config.php');
+            new MY_Config();
+        }
+        return get_instance()->config->base_url($uri, $protocol);
+    }
+}
+
+
+if(!function_exists('site_url'))
+{
+    function site_url($uri = '', $protocol = NULL)
+    {
+        // in case of MY_Config never initialiezed, init MY_Config so that it will be cached
+        if(empty(get_instance()->config->base_url()))
+        {
+            include_once(APPPATH.'core/MY_Config.php');
+            new MY_Config();
+        }
+
+        // site_url need special treatment
+        $config = get_instance()->config;
+        $hostname = $config->config['hostname'];
+        $actual_hostname = $_SERVER['SERVER_NAME'];
+
+        $site_url = $config->site_url($uri, $protocol);
+        $site_url = str_replace('://'.$hostname, '://'.$actual_hostname, $site_url);
+        return $site_url;
+    }
+}
+
+
 if(!function_exists('run_module_controller'))
 {
     function run_module_controller($url, $return = FALSE)
@@ -234,7 +306,7 @@ if(!function_exists('run_module_controller'))
         $url_parts = explode('?', $url);
         $get = count($url_parts) > 1? $url_parts[1] : '';
         $get_parts = explode('&', $get);
-        $url_parts = explode('/', $url_parts[0]);
+        $url_parts = explode('/', trim($url_parts[0], '/'));
 
         // save $_GET status, and override with the new one
         $old_GET = $_GET;
@@ -278,14 +350,11 @@ if(!function_exists('run_module_controller'))
                 // get the result
                 if(file_exists($file_name) && is_readable($file_name))
                 {
-                    eval('$obj = new '.$namespace.'\\'.$test_class.'();');
-                    if(method_exists($obj, $test_function)){
-                        for($i=0; $i<count($test_parameters); $i++){
-                            $test_parameters[$i] = "'" . addslashes($test_parameters[$i]) . "'";
-                        }
-                        $test_parameters = implode(', ', $test_parameters);
+                    $full_class = $namespace . '\\'.$test_class;
+                    if(method_exists($full_class, $test_function)){
                         ob_start();
-                        call_user_func(array($obj, $test_function), $test_parameters);
+                        $obj = new $full_class();
+                        call_user_func_array(array($obj, $test_function), $test_parameters);
                         $result = ob_get_contents();
                         @ob_end_clean();
                         $found = TRUE;
@@ -321,40 +390,55 @@ if(!function_exists('run_module_controller'))
     }
 }
 
-if(!function_exists('asset_url'))
+if(!function_exists('run_routed_module_url'))
 {
-    function asset_url($uri = '', $protocol = NULL)
+    require_once(APPPATH.'core/route_config_loader.php');
+
+    function run_routed_module_url($url, $return = FALSE)
     {
-        $uri_parts = explode('/', $uri);
-        if( count($uri_parts) > 1 && in_array($uri_parts[0], get_available_modules()) )
+        $route = __load_route_config();
+        $disable_autoroute = isset($route['disable_autoroute'])? $route['disable_autoroute'] : FALSE;
+        $route = __sanitize_route($route);
+
+        // start parsing
+        foreach ($route as $key => $val)
         {
-            $module = $uri_parts[0];
-            $path = implode(DIRECTORY_SEPARATOR, array_slice($uri_parts, 1));
-
-            // get original file name and cached file name
-            $original_file_name = MODULEPATH . $module . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . $path;
-            $cached_file_name = ASSETPATH . 'modules' . DIRECTORY_SEPARATOR . $module . DIRECTORY_SEPARATOR . $path;
-
-            cache_file($original_file_name, $cached_file_name);
-
-            $uri = 'modules/' . $module . '/' . implode('/', array_slice($uri_parts, 1));
-        }
-
-        return get_instance()->config->asset_url($uri, $protocol);
-    }
-}
-
-if(!function_exists('cache_module_assets'))
-{
-    function cache_module_assets($module)
-    {
-        if(in_array($module, get_available_modules()))
-        {
-            $original_path = MODULEPATH . $module . DIRECTORY_SEPARATOR . 'assets';
-            if(file_exists($original_path))
+            // if $val is array, assume the request is use "GET" method 
+            if (is_array($val))
             {
-                rcopy($original_path, ASSETPATH . 'modules' . DIRECTORY_SEPARATOR . $module);
+                $val = array_change_key_case($val, CASE_LOWER);
+                if (isset($val['get']))
+                {
+                    $val = $val['get'];
+                }
+                else
+                {
+                    continue;
+                }
+            }
+
+            // Convert wildcards to RegEx
+            $key = str_replace(array(':any', ':num'), array('[^/]+', '[0-9]+'), $key);
+
+            // Does the RegEx match?
+            if (preg_match('#^'.$key.'$#', $url))
+            {
+                $actual_url = preg_replace('#^'.$key.'$#', $val, $url);
+                return run_module_controller($actual_url, $return);
+            }
+            // RegEx doesn't match? don't give up, it might contains some get queries
+            else if(preg_match('#^'.$key.'?(.+)$#', $url, $matches))
+            {
+                $val = $val.'?'.$matches[count($matches)-1];
+                $actual_url = preg_replace('#^'.$key.'\?(+*)$#', $val, $url);
+                return run_module_controller($actual_url, $return);
             }
         }
+        // all routes failed
+        if(!$disable_autoroute)
+        {
+            return run_module_controller($url, $return);
+        }
+        return NULL;
     }
 }

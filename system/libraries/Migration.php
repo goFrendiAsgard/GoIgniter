@@ -131,7 +131,7 @@ class CI_Migration {
 		// Are they trying to use migrations while it is disabled?
 		if ($this->_migration_enabled !== TRUE)
 		{
-			show_error('Migrations has been loaded but is disabled or set up incorrectly.');
+			//show_error('Migrations has been loaded but is disabled or set up incorrectly.');
 		}
 
 		// If not set, set it

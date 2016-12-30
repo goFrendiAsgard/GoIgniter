@@ -18,12 +18,12 @@ if(file_exists($_cms_route_file) && is_readable($_cms_route_file))
 
 
 // Get configuration from per-site json route configuration of cms module
-include(APPPATH.'core/Site.php');
+include_once(APPPATH.'core/Site.php');
 $site = new Site();
 $site_code = $site->get_current_code();
 $_cms_route_file = $site->is_main_site()?
-    MODULEPATH.'cms_/json/main.json' :
-    MODULEPATH.'cms/json/sites/'.$site_code.'.json';
+    MODULEPATH.'cms_/json/routes-main.json' :
+    MODULEPATH.'cms/json/sites/routes-site-'.$site_code.'.json';
 unset($site);
 
 if(file_exists($_cms_route_file) && is_readable($_cms_route_file))

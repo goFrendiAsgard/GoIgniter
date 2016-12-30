@@ -73,9 +73,11 @@ class Module_Migrator extends CI_Model
         }
 
         $alias = 'migration_'.substr(md5($module), 0, 10);
-        $this->load->library('migration', $config, $alias);
 
-        $migration = $this->{$alias};
+
+        require_once(BASEPATH.'libraries/Migration.php');
+        $migration = new \CI_Migration($config);
+
 
         if(($mode == 'latest' && $migration->latest()) || $migration->current())
         {

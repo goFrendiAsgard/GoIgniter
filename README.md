@@ -185,9 +185,14 @@ CodeIgniter was built with single MVC in mind. While this make things simple, so
         {
             $migrator = new Module_Migrator();
             $migrator->migrate_all();
+
             // you can also do this:
             // $migrator->migrate_all('current', array('test' => 0, 'cms' => '20161030'))
             // This will only migrate test to version 0, and cms to version 20161030
+
+            // you can also do this:
+            // $migrator->migrate('blog', 'current', 0)
+            // This will only migrate blog to version 0
         }
     }
 ```
@@ -247,25 +252,25 @@ You can change the values by editing `index.php`
 
 These functions are always available, either in models, views, or controllers
 
-* asset_url($url = '', $protocol = NULL)
-* cache_file($src_file, $dst_file) 
-* rcopy($src, $dst)
-* get_available_modules()
-* helper($helpers = array())
-* view($view, $data = array(), $return = FALSE)
-* run_module_controller($url, $return = FALSE)
-* cache_module_asset($modules)
+* `asset_url($url = '', $protocol = NULL)`
+* `site_url($url = '', $protocol = NULL)` --> This will also detect multisite
+* `base_url($url = '', $protocol = NULL)`
+* `cache_file($src_file, $dst_file)` 
+* `get_available_modules()`
+* `helper($helpers = array())`
+* `view($view, $data = array(), $return = FALSE)`
+* `run_module_controller($url, $return = FALSE)`
+* `run_routed_module($url, $return = FALSE)`
+* `cache_modules()
 
 # Soon to be added
 
-* Multiple Migration
 * CMS Module
 * Amigo (kind of Artisan in Laravel)
 * Unit testing (Failed)
-* DB Migration (No need, just use CodeIgniter's, but make it support multiple migration)
 * CodeIgniter4 like Model & Entity
 * Multisite
-* Laravel's like blade engine
+* Laravel's like blade engine (No need, use twig instead)
 
 # The bad things
 

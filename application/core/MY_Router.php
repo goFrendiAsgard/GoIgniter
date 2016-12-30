@@ -41,6 +41,8 @@ if(MY_Router::$locations === NULL)
     );
 }
 
+require_once(APPPATH.'core/route_config_loader.php');
+
 class MY_Router extends CI_Router{
 
     public static $moduleRoutes;
@@ -52,63 +54,19 @@ class MY_Router extends CI_Router{
 
     protected function _set_routing()
 	{
-		// Load the routes.php file. It would be great if we could
-		// skip this for enable_query_strings = TRUE, but then
-		// default_controller would be empty ...
-		if (file_exists(APPPATH.'config/routes.php'))
-		{
-			include(APPPATH.'config/routes.php');
-		}
 
-		if (file_exists(APPPATH.'config/'.ENVIRONMENT.'/routes.php'))
-		{
-			include(APPPATH.'config/'.ENVIRONMENT.'/routes.php');
-		}
+        $route = __load_route_config();
 
-        // Added by Go Frendi, to allow extra route modification
-        if (file_exists(EXTCONFIGPATH.'config/routes.php'))
-        {
-            include(EXTCONFIGPATH.'config/routes.php');
-        }
+        isset($route['default_controller']) && $this->default_controller = $route['default_controller'];
+        isset($route['translate_uri_dashes']) && $this->translate_uri_dashes = $route['translate_uri_dashes'];
+        // Added by Go Frendi, disable autoroute
+        isset($route['disable_autoroute']) && $this->disable_autoroute = $route['disable_autoroute'];
+        unset($route['default_controller'], $route['translate_uri_dashes'], $route['disable_autoroute']);
 
-		// Validate & get reserved routes
-		if (isset($route) && is_array($route))
-		{
-			isset($route['default_controller']) && $this->default_controller = $route['default_controller'];
-			isset($route['translate_uri_dashes']) && $this->translate_uri_dashes = $route['translate_uri_dashes'];
+        $route = __sanitize_route($route);
+        $this->routes = $route;
 
-            // Added by Go Frendi, disable autoroute
-            isset($route['disable_autoroute']) && $this->disable_autoroute = $route['disable_autoroute'];
-			unset($route['default_controller'], $route['translate_uri_dashes'], $route['disable_autoroute']);
-
-            // Added by Go Frendi, to trick reserved keywords
-            // so that http://localhost/default_controller will be directed to $route['_default_controller']
-            $reserved_keywords = array('default_controller', 'translate_uri_dashes', 'disable_autoroute');
-            $new_route = array();
-            foreach($route as $old_key=>$val)
-            {
-                $key_parts = explode('/', $old_key);
-                if(count($key_parts) > 0)
-                {
-                    $first_segment = $key_parts[0];
-                    if(!in_array($first_segment, $reserved_keywords) && in_array(ltrim($first_segment, '_'), $reserved_keywords))
-                    {
-                        $first_segment = substr($first_segment, 1);
-                        $key_parts[0] = $first_segment;
-                        $new_key = implode('/', $key_parts);
-
-                        // create new key
-                        $new_route[$new_key] = $val;
-                        unset($route[$old_key]);
-                    }
-                }
-            }
-            $route = array_merge($new_route, $route);
-
-			$this->routes = $route;
-		}
-
-		// Are query strings enabled in the config file? Normally CI doesn't utilize query strings
+	    // Are query strings enabled in the config file? Normally CI doesn't utilize query strings
 		// since URI segments are more search-engine friendly, but they can optionally be used.
 		// If this feature is enabled, we will gather the directory/class/method a little differently
 		if ($this->enable_query_strings)

@@ -4,6 +4,11 @@ namespace Modules\Test\Controllers;
 use \Modules\Test\Models\MyModel;
 class Test extends \CI_Controller
 {
+    function __construct()
+    {
+        parent::__construct();
+    }
+
     function index()
     {
         $model = new MyModel();

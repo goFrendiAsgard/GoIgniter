@@ -455,9 +455,14 @@ if ( ! is_php('5.4'))
 
 	if ($e404)
 	{
-		if ( ! empty($RTR->routes['404_override']))
+
+        require_once(APPPATH.'core/route_config_loader.php');
+        $route = __load_route_config();
+        $disable_autoroute = isset($route['disable_autoroute'])? $route['disable_autoroute'] : FALSE;
+
+		if ( ! empty($disable_autoroute))
 		{
-			if (sscanf($RTR->routes['404_override'], '%[^/]/%s', $error_class, $error_method) !== 2)
+			if (sscanf($disable_autoroute, '%[^/]/%s', $error_class, $error_method) !== 2)
 			{
 				$error_method = 'index';
 			}

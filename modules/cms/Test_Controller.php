@@ -23,6 +23,11 @@ class Test_Controller extends \CI_Controller
         }
     }
 
+    public function global_setup_and_tearDown()
+    {
+        // run once before and after all the test
+    }
+
     public function global_setup()
     {
         // run once before all the test
@@ -31,6 +36,11 @@ class Test_Controller extends \CI_Controller
     public function global_tearDown()
     {
         // run once after all the test
+    }
+
+    public function setup_and_tearDown()
+    {
+        // run before and after each test
     }
 
     public function setup()
@@ -45,10 +55,12 @@ class Test_Controller extends \CI_Controller
 
     public function index()
     {
+        $this->global_setup_and_tearDown();
         $this->global_setup();
         $separator = array();
         foreach($this->_tests as $test)
         {
+            $this->setup_and_tearDown();
             $this->setup();
 
             // get result count
@@ -62,8 +74,10 @@ class Test_Controller extends \CI_Controller
             }
 
             $this->tearDown();
+            $this->setup_and_tearDown();
         }
         $this->global_tearDown();
+        $this->global_setup_and_tearDown();
 
         // create the result
         $result = $this->unit->result();

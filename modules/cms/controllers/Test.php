@@ -9,7 +9,8 @@ use \Modules\Cms\Mutator;
 
 class Test extends Test_Controller 
 {
-    function reset()
+
+    function global_setup_and_tearDown()
     {
         // undo mutation
         $mutator = new Mutator();
@@ -22,28 +23,47 @@ class Test extends Test_Controller
             $site->delete_site($code);
         }
 
-    }
-
-    function global_setup()
-    {
-        $this->reset();
-    }
-
-    function global_tearDown()
-    {
-        $module_migrator = new Module_Migrator();
-        $module_migrator->migrate_all('current');
-
-        $this->reset();
-
+        // delete files
         !file_exists(MODULEPATH.'cms/.mutation') || unlink(MODULEPATH.'cms/.mutation');
         !file_exists(MODULEPATH.'cms/.genesis') || unlink(MODULEPATH.'cms/.genesis');
+        !file_exists(MODULEPATH.'cms/json/configuration.json') || unlink(MODULEPATH.'cms/json/configuration.json');
+        !file_exists(MODULEPATH.'cms/json/routes.json') || unlink(MODULEPATH.'cms/json/routes.json');
+        !file_exists(MODULEPATH.'cms/json/sites/routes-main.json') || unlink(MODULEPATH.'cms/json/routes-main.json');
         !file_exists(MODULEPATH.'cms/mutation_backup/config.php.bak') || unlink(MODULEPATH.'cms/mutation_backup/config.php.bak');
         !file_exists(MODULEPATH.'cms/mutation_backup/config.php.bak') || unlink(MODULEPATH.'cms/mutation_backup/config.php.bak');
         !file_exists(EXTCONFIGPATH.'config/config.php') || unlink(EXTCONFIGPATH.'config/config.php');
         !file_exists(EXTCONFIGPATH.'config/route.php') || unlink(EXTCONFIGPATH.'config/route.php');
     }
+
+    function global_setup()
+    {
+        $test_route = json_encode(array(
+            'nyan/(:any)' => 'cms/test/nyan/$1',
+            'nyan' => 'cms/test/nyan'
+        ));
+        file_put_contents(MODULEPATH.'cms/json/routes.json', $test_route);
+    }
+
+    function global_tearDown()
+    {
+        // undo migration
+        $module_migrator = new Module_Migrator();
+        $module_migrator->migrate_all('current');
+    }
     
+    function nyan($nyan = 'nyan')
+    {
+        echo 'nyan nyan '.$nyan;
+        if($this->input->get('a'))
+        {
+            echo ' '.$this->input->get('a');
+        }
+        if($this->input->get('b'))
+        {
+            echo ' '.$this->input->get('b');
+        }
+    }
+
     function test_mutation()
     {
         $mutator = new Mutator();
@@ -103,7 +123,7 @@ class Test extends Test_Controller
         $notes = 'You can pass user, password, and database get query to override database setting, i.e: ?user=root&password=&database=mydb. By default this test use Mysql, user:root, password:toor, database:tests. The database should be empty';
 
         // Test $genesis->setup()
-        $genesis->set_db_config('user', $db_user);
+        $genesis->set_db_config('username', $db_user);
         $genesis->set_db_config('password', $db_password);
         $genesis->set_db_config('database', $db_database);
 
@@ -112,7 +132,6 @@ class Test extends Test_Controller
         $this->unit->run($test, $expected_result, 'genesis->setup() should yield TRUE', $notes);
 
         // Connection works
-        $this->load->database();
         $test = $this->db->conn_id !== FALSE;
         $expected_result = TRUE;
         $this->unit->run($test, $expected_result, 'DB connection should work after genesis set');
@@ -207,8 +226,7 @@ class Test extends Test_Controller
         $expected_result = TRUE;
         $notes = 'Table : '.implode(', ', $tables);
         $this->unit->run($test, $expected_result, 'Count of table should be more than count of available modules', $notes);
-
-}
+    }
 
     function test_site()
     {
@@ -287,6 +305,7 @@ class Test extends Test_Controller
         $this->unit->run($test, $expected_result, 'incognito is not main site');
 
         $_SERVER['SERVER_NAME'] = $old_server_name;
+
         $expected_result = NULL;
         $test = $site->get_current_code();
         $this->unit->run($test, $expected_result, 'Main site should not have current code');
@@ -294,7 +313,94 @@ class Test extends Test_Controller
         $expected_result = TRUE;
         $test = $site->is_main_site();
         $this->unit->run($test, $expected_result, 'Obviously main site is main site');
+    }
 
+    function test_asset_url()
+    {
+        $expected_result = base_url('assets/modules/cms/jquery-3.1.1.min.js');
+        $test = asset_url('cms/jquery-3.1.1.min.js');
+        $this->unit->run($test, $expected_result, 'Asset URL of CMS\'s Jquery');
+
+        $expected_result = base_url('assets/modules/cms/bootstrap-4.0.0-alpha.5-dist/css/bootstrap.min.css');
+        $test = asset_url('cms/bootstrap-4.0.0-alpha.5-dist/css/bootstrap.min.css');
+        $this->unit->run($test, $expected_result, 'Asset URL of CMS\'s Bootstrap');
+
+        $old_server_name = $_SERVER['SERVER_NAME'];
+
+        $_SERVER['SERVER_NAME'] = 'bukurai.com';
+
+        $expected_result = base_url('assets/modules/cms/jquery-3.1.1.min.js');
+        $test = asset_url('cms/jquery-3.1.1.min.js');
+        $this->unit->run($test, $expected_result, 'Asset URL of bukurai.com\'s CMS\'s Jquery');
+
+        $_SERVER['SERVER_NAME'] = 'incognito.'.$old_server_name;
+
+        $expected_result = base_url('assets/modules/cms/jquery-3.1.1.min.js');
+        $test = asset_url('cms/jquery-3.1.1.min.js');
+        $this->unit->run($test, $expected_result, 'Asset URL of incognito\'s CMS\'s Jquery');
+
+        $_SERVER['SERVER_NAME'] = $old_server_name;
+    }
+
+    function test_site_url()
+    {
+        $expected_result = base_url('index.php/cms');
+        $test = site_url('cms');
+        $this->unit->run($test, $expected_result, 'site URL of CMS');
+
+        $old_server_name = $_SERVER['SERVER_NAME'];
+        $this->load->config('config');
+        $config = $this->config->config;
+        $hostname = $config['hostname'];
+
+        $_SERVER['SERVER_NAME'] = 'bukurai.com';
+
+        $expected_result = str_replace('://'.$hostname, '://'.$_SERVER['SERVER_NAME'], base_url('index.php/cms'));
+        $test = site_url('cms');
+        $this->unit->run($test, $expected_result, 'site URL of bukurai.com\'s CMS');
+
+        $_SERVER['SERVER_NAME'] = 'incognito.'.$old_server_name;
+
+        $expected_result = str_replace('://'.$hostname, '://'.$_SERVER['SERVER_NAME'], base_url('index.php/cms'));
+        $test = site_url('cms');
+        $this->unit->run($test, $expected_result, 'site URL of incognito\'s CMS');
+
+        $_SERVER['SERVER_NAME'] = $old_server_name;
+    }
+
+
+    function test_run_module_controller()
+    {
+        $expected_result = 'nyan nyan nyan tama';
+        $test = run_module_controller('cms/test/nyan?a=tama', TRUE);
+        $this->unit->run($test, $expected_result, 'Run Module Controller: cms/test/nyan?a=tama');
+
+        $expected_result = 'nyan nyan gude tama';
+        $test = run_module_controller('cms/test/nyan/gude?a=tama', TRUE);
+        $this->unit->run($test, $expected_result, 'Run Module Controller: cms/test/nyan/gude?a=tama');
+
+        $expected_result = 'nyan nyan nyan gude tama';
+        $test = run_module_controller('cms/test/nyan/nyan?a=gude&b=tama', TRUE);
+        $this->unit->run($test, $expected_result, 'Run Module Controller: cms/test/nyan?a=gude&b=tama');
+    }
+
+    function test_run_routed_module_url()
+    {
+        $expected_result = 'nyan nyan nyan';
+        $test = run_routed_module_url('nyan', TRUE);
+        $this->unit->run($test, $expected_result, 'Run Routed Module URL: nyan');
+
+        $expected_result = 'nyan nyan nyan tama';
+        $test = run_routed_module_url('cms/test/nyan?a=tama', TRUE);
+        $this->unit->run($test, $expected_result, 'Run Routed Module URL: cms/test/nyan?a=tama');
+
+        $expected_result = 'nyan nyan gude tama';
+        $test = run_routed_module_url('nyan/gude?a=tama', TRUE);
+        $this->unit->run($test, $expected_result, 'Run Routed Module URL: nyan/gude?a=tama');
+
+        $expected_result = 'nyan nyan nyan gude tama';
+        $test = run_routed_module_url('nyan/nyan?a=gude&b=tama', TRUE);
+        $this->unit->run($test, $expected_result, 'Run Routed Module URL: nyan/nyan?a=gude&b=tama');
     }
 
 }
