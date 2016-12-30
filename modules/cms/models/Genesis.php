@@ -22,36 +22,25 @@ class Genesis extends \CI_Model
     {
         $this->_mark_file = MODULEPATH.'cms/.genesis';
         $this->_config_file = MODULEPATH.'cms/configs/configuration.json';
-        if(self::$_is_set === NULL)
-        {
-            if(file_exists($this->_config_file))
-            {
-                self::$_is_set = TRUE;
-            }
-            else
-            {
-                self::$_is_set = FALSE;
 
-                // set some default values
-                $this->_configs = array(
-                    'asset_url' => asset_url(),
-                    'hostname' => $_SERVER['SERVER_NAME'],
-                    'index_page' => 'index.php',
-                    'encryption_key' => md5(date('YmdHis')),
-                    'sess_cookie_name' => substr(md5(date('YmdHis')), 0, 10),
-                    'db.default.dsn' => '',
-                    'db.default.hostname' => 'localhost',
-                    'db.default.username' => 'root',
-                    'db.default.password' => '',
-                    'db.default.database' => '',
-                    'db.default.dbdriver' => 'mysqli',
-                    'db.default.dbprefix' => 'go_',
-                    'db.default.pconnect' => TRUE,
-                    'migration.migration_enabled' => TRUE,
-                );
+        // set some default values
+        $this->_configs = array(
+            'asset_url' => asset_url(),
+            'hostname' => $_SERVER['SERVER_NAME'],
+            'index_page' => 'index.php',
+            'encryption_key' => md5(date('YmdHis')),
+            'sess_cookie_name' => substr(md5(date('YmdHis')), 0, 10),
+            'db.default.dsn' => '',
+            'db.default.hostname' => 'localhost',
+            'db.default.username' => 'root',
+            'db.default.password' => '',
+            'db.default.database' => '',
+            'db.default.dbdriver' => 'mysqli',
+            'db.default.dbprefix' => 'go_',
+            'db.default.pconnect' => TRUE,
+            'migration.migration_enabled' => TRUE,
+        );
 
-            }
-        }
     }
 
     public function set_config($key, $value)
@@ -113,7 +102,6 @@ class Genesis extends \CI_Model
                 if(function_exists('opcache_invalidate'))
                 {
                     opcache_invalidate($cms_config_file);
-                    opcache_invalidate($ext_config_file);
                 }
 
                 // unset any previously created $CI->db
@@ -121,7 +109,7 @@ class Genesis extends \CI_Model
                 unset($CI->db);
 
                 // reload database with newly created configuration
-                $this->load->database();
+                $CI->db = $this->load_db();
 
                 // prepare migration
                 $module_migrator = new \Module_Migrator();

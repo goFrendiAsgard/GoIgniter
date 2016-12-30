@@ -48,6 +48,7 @@ class MY_Router extends CI_Router{
 
     public $module;
 	private $located = 0;
+    private $disable_autoroute = FALSE;
 
     protected function _set_routing()
 	{
@@ -75,7 +76,35 @@ class MY_Router extends CI_Router{
 		{
 			isset($route['default_controller']) && $this->default_controller = $route['default_controller'];
 			isset($route['translate_uri_dashes']) && $this->translate_uri_dashes = $route['translate_uri_dashes'];
-			unset($route['default_controller'], $route['translate_uri_dashes']);
+
+            // Added by Go Frendi, disable autoroute
+            isset($route['disable_autoroute']) && $this->disable_autoroute = $route['disable_autoroute'];
+			unset($route['default_controller'], $route['translate_uri_dashes'], $route['disable_autoroute']);
+
+            // Added by Go Frendi, to trick reserved keywords
+            // so that http://localhost/default_controller will be directed to $route['_default_controller']
+            $reserved_keywords = array('default_controller', 'translate_uri_dashes', 'disable_autoroute');
+            $new_route = array();
+            foreach($route as $old_key=>$val)
+            {
+                $key_parts = explode('/', $old_key);
+                if(count($key_parts) > 0)
+                {
+                    $first_segment = $key_parts[0];
+                    if(!in_array($first_segment, $reserved_keywords) && in_array(ltrim($first_segment, '_'), $reserved_keywords))
+                    {
+                        $first_segment = substr($first_segment, 1);
+                        $key_parts[0] = $first_segment;
+                        $new_key = implode('/', $key_parts);
+
+                        // create new key
+                        $new_route[$new_key] = $val;
+                        unset($route[$old_key]);
+                    }
+                }
+            }
+            $route = array_merge($new_route, $route);
+
 			$this->routes = $route;
 		}
 
@@ -126,15 +155,83 @@ class MY_Router extends CI_Router{
 		}
 
 		// Is there anything to parse?
-		if ($this->uri->uri_string !== '')
-		{
-			$this->_parse_routes();
-		}
-		else
-		{
-			$this->_set_default_controller();
-		}
+        if($this->disable_autoroute)
+        {
+            if ($this->uri->uri_string !== '')
+            {
+                $this->_parse_routes();
+            }
+            else
+            {
+                $this->_set_default_controller();
+            }
+        }
+        else
+        {
+            $this->_parse_routes();
+        }
 	}
+
+    protected function _parse_routes()
+	{
+		// Turn the segment array into a URI string
+		$uri = implode('/', $this->uri->segments);
+
+		// Get HTTP verb
+		$http_verb = isset($_SERVER['REQUEST_METHOD']) ? strtolower($_SERVER['REQUEST_METHOD']) : 'cli';
+
+		// Loop through the route array looking for wildcards
+		foreach ($this->routes as $key => $val)
+		{
+			// Check if route format is using HTTP verbs
+			if (is_array($val))
+			{
+				$val = array_change_key_case($val, CASE_LOWER);
+				if (isset($val[$http_verb]))
+				{
+					$val = $val[$http_verb];
+				}
+				else
+				{
+					continue;
+				}
+			}
+
+			// Convert wildcards to RegEx
+			$key = str_replace(array(':any', ':num'), array('[^/]+', '[0-9]+'), $key);
+
+			// Does the RegEx match?
+			if (preg_match('#^'.$key.'$#', $uri, $matches))
+			{
+				// Are we using callbacks to process back-references?
+				if ( ! is_string($val) && is_callable($val))
+				{
+					// Remove the original string from the matches array.
+					array_shift($matches);
+
+					// Execute the callback using the values in matches as its parameters.
+					$val = call_user_func_array($val, $matches);
+				}
+				// Are we using the default routing method for back-references?
+				elseif (strpos($val, '$') !== FALSE && strpos($key, '(') !== FALSE)
+				{
+					$val = preg_replace('#^'.$key.'$#', $val, $uri);
+				}
+
+				$this->_set_request(explode('/', $val));
+				return;
+			}
+		}
+
+		// If we got this far it means we didn't encounter a
+        // matching route so we'll set the site default route
+        // Added by Go Frendi: only if disable_autoroute is FALSE
+        if(!$this->disable_autoroute)
+        {
+		    $this->_set_request(array_values($this->uri->segments));
+        }
+	}
+
     /** Load a module file **/
 	public static function load_file($file, $path, $type = 'other', $result = TRUE)	
 	{

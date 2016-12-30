@@ -374,6 +374,11 @@ if ( ! is_php('5.4'))
 	// Set a mark point for benchmarking
 	$BM->mark('loading_time:_base_classes_end');
 
+
+    // Added by GoFrendi
+    include(APPPATH.'/core/go_init.php');
+
+
 /*
  * ------------------------------------------------------
  *  Sanity checks
@@ -410,7 +415,7 @@ if ( ! is_php('5.4'))
         // additional code by GoFrendi, to add namespace if necessary
         if( ! class_exists($class, FALSE) )
         {
-            $class = 'Modules\\'.$RTR->module.'\\Controllers\\'.$class;
+            $class = 'Modules\\'.ucfirst($RTR->module).'\\Controllers\\'.$class;
         }
 
 		if ( ! class_exists($class, FALSE) OR $method[0] === '_' OR method_exists('CI_Controller', $method))
@@ -437,6 +442,7 @@ if ( ! is_php('5.4'))
 		 * ReflectionMethod::isConstructor() is the ONLY reliable check,
 		 * knowing which method will be executed as a constructor.
 		 */
+
 		elseif ( ! is_callable(array($class, $method)) && strcasecmp($class, $method) === 0)
 		{
 			$reflection = new ReflectionMethod($class, $method);
@@ -517,10 +523,6 @@ if ( ! is_php('5.4'))
  */
 	// Mark a start point so we can benchmark the controller
 	$BM->mark('controller_execution_time_( '.$class.' / '.$method.' )_start');
-
-    // Added by GoFrendi
-    include(APPPATH.'/core/go_init.php');
-
 
 	$CI = new $class();
 

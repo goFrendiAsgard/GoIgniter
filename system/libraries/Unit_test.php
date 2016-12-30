@@ -300,7 +300,6 @@ class CI_Unit_test {
 
 				$temp[$CI->lang->line('ut_'.$key, FALSE)] = $val;
 			}
-
 			$retval[] = $temp;
 		}
 

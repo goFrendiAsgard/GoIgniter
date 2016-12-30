@@ -62,6 +62,8 @@ class Mutator{
             return FALSE;
         }
 
+        $this->_error_message = '';
+
         // backup all the files
         $this->copy_file($this->_welcome_controller_file, $this->_backup_welcome_controller_file);
         $this->copy_file($this->_ext_config_file, $this->_backup_ext_config_file);
@@ -72,7 +74,10 @@ class Mutator{
         $this->copy_file(MODULEPATH.'cms/mutation_res/routes.php', $this->_ext_route_file);
 
         // delete Welcome controller
-        unlink($this->_welcome_controller_file);
+        if(file_exists($this->_welcome_controller_file))
+        {
+            unlink($this->_welcome_controller_file);
+        }
 
         // set mark
         file_put_contents($this->_mark_file, 'Mutation performed on '.date('Y-m-d H:i:s'));
@@ -83,9 +88,11 @@ class Mutator{
     {
         if(!$this->is_mutation_performed())
         {
-            $this->_error_message = 'Cannot do mutation, mutation has not performed';
+            $this->_error_message = 'Cannot undo mutation, mutation has not been performed';
             return FALSE;
         }
+
+        $this->_error_message = '';
 
         // put Welcome.php back
         $this->copy_file($this->_backup_welcome_controller_file, $this->_welcome_controller_file);

@@ -4,14 +4,7 @@ spl_autoload_register(function ($class)
 {
     $class_parts = explode('\\', trim($class, '\\'));
 
-    $core_classes = array('Module_Migrator', 'Site');
-
-    // Modules and App Namespace
-    if(in_array($class, $core_classes))
-    {
-        include APPPATH.'core/'.$class.'.php';
-    }
-    else if(count($class_parts) > 1 && ($class_parts[0] == 'App' || $class_parts[0] == 'Modules') )
+    if(count($class_parts) > 1 && ($class_parts[0] == 'App' || $class_parts[0] == 'Modules') )
     {
         $classPrefix = $class_parts[0];
         $class_parts = array_slice($class_parts, 1);
@@ -48,6 +41,15 @@ spl_autoload_register(function ($class)
                 include($file_name);
             }
         }
+        // Core classes
+        else
+        {
+            $file_name = APPPATH . 'core/' . $class . '.php';
+            if(file_exists($file_name) && is_readable($file_name))
+            {
+                include($file_name);
+            }
+        }
     }
 
 });
@@ -65,7 +67,7 @@ if(!function_exists('cache_file'))
 
                 // create subdirectory
                 $path_parts = explode(DIRECTORY_SEPARATOR, $cached_file_name);
-                for($i=1; $i<count($path_parts)-1; $i++)
+                for($i=1; $i<count($path_parts); $i++)
                 {
                     $sub_path = implode(DIRECTORY_SEPARATOR, array_slice($path_parts, 0, $i));
                     file_exists($sub_path) || @mkdir($sub_path);
@@ -189,6 +191,8 @@ if(!function_exists('view'))
 
                 // cache the file
                 cache_file($file_name, $cached_file_name);
+
+                $found = file_exists($cached_file_name);
 
                 // adjust the view
                 $view = 'modules/' . $view;

@@ -2,14 +2,16 @@
 
 class Module_Migrator extends CI_Model
 {
-    private $migration_config;
-    private $migration_error;
+    protected $migration_config;
+    protected $migration_error;
 
     public function __construct()
     {
         // get the pre-processed configuration
         $this->migration_config = $this->load->get_library_config('migration');
         $this->migration_error = array();
+        $this->load->database();
+        $this->load->dbforge();
     }
 
     public function get_error($module=NULL)
@@ -40,37 +42,51 @@ class Module_Migrator extends CI_Model
         }
     }
 
+    protected function get_migration_table($module)
+    {
+        $config = $this->migration_config;
+        return $config['migration_table'].'_'.$module;
+    }
+
+    protected function get_migration_path($module)
+    {
+        $config = $this->migration_config;
+        return MODULEPATH.$module.'/migrations';
+    }
+
     public function migrate($module, $mode = 'latest', $version = NULL)
     {
-            // if module doesn't have migrations directory, skip it
-            if(!file_exists(MODULEPATH.$module.'/migrations')){
-                $this->migration_error[$module] = 'Migration of '.$module.' is not available';
-                return FALSE;
-            }
+        // if module doesn't have migrations directory, skip it
+        if(!file_exists($this->get_migration_path($module))){
+            $this->migration_error[$module] = 'Migration of '.$module.' is not available';
+            return FALSE;
+        }
 
-            // make different configuration for each module
-            $config = $this->migration_config;
-            $config['migration_enabled'] = TRUE;
-            $config['migration_table'] = $module.'_'.$config['migration_table'];
-            $config['migration_path'] = MODULEPATH.$module.'/migrations';
-            if($version !== NULL)
-                $config['migration_version'] = $version;
-            
-            $alias = 'migration_'.substr(md5($module), 0, 10);
-            $this->load->library('migration', $config, $alias);
+        // make different configuration for each module
+        $config = $this->migration_config;
+        $config['migration_enabled'] = TRUE;
+        $config['migration_table'] = $this->get_migration_table($module);
+        $config['migration_path'] = $this->get_migration_path($module);
+        if($version !== NULL)
+        {
+            $config['migration_version'] = $version;
+        }
 
-            $migration = $this->{$alias};
+        $alias = 'migration_'.substr(md5($module), 0, 10);
+        $this->load->library('migration', $config, $alias);
 
-            if(($mode == 'latest' && $migration->latest() === FALSE) || $migration->current() === FALSE)
-            {
-                $this->migration_error[$module] = $migration->error_string();
-                return FALSE;
-            }
-            else
-            {
-                $this->migration_error[$module] = '';
-            }
-            return TRUE;
+        $migration = $this->{$alias};
+
+        if(($mode == 'latest' && $migration->latest()) || $migration->current())
+        {
+            $this->migration_error[$module] = $migration->error_string();
+            return FALSE;
+        }
+        else
+        {
+            $this->migration_error[$module] = '';
+        }
+        return TRUE;
     }
 
 }

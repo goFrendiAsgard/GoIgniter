@@ -12,22 +12,21 @@ Personally, I made this as core foundation of No-CMS 2.0
 
     CodeIgniter3 is doing it right by supporting migration. In fact, it is almost impossible to write a script that is 100% working without any attempt to fix it later. Instead of trying to do so, build the simplest part possible, and gradually scale it.
 
-* If something is not broken, don't fix it, and don't throw it away just to be cool.
+* If something is not broken, don't fix it.
 
     CodeIgniter3 is stable enough. Some new technologies such as namespace might not be used extensively. The `$this->load->model()` might be ugly, but it has work since 2010, so let it be.
 
-* If something is broken, find out which part of the thing is actually broken, and fix/improve it.
+* If something is broken (outdated), find out which part exactly it is, and only fix/improve that part.
 
-    If your old comfortable car is rusty and outdated, you will fix the broken parts and add `Jarvis` on it, instead of buy a new expensive car, and spend some times to learn all the new things.
+    Sometime recode things from scratch is necessary, but most of the time, you can just extend and improve.
 
 * Do as little changes as possible, and only do it when necessary.
 
-    You are lazy, it is good, and keep it that way :)
+    You are lazy, it is good, and you should keep it that way :)
 
 # Minimum requirement
 
 * PHP 5.3, since I use `anonymous function`
-
 
 # How to start
 
@@ -37,10 +36,13 @@ Personally, I made this as core foundation of No-CMS 2.0
 # Feature
 
 * HMVC with namespace
+* run_module_controller() which is better than HMVC's `Modules::run`
 * static file management with `asset_url()`
 * The way of initiating helper, model, or library is very similar to CodeIgniter4
-* Still compatible with PHP 5.4 (CodeIgniter4 will only support PHP7)
-
+* Still compatible with PHP 5.4 (Contrast to CodeIgniter4 that will only support PHP7)
+* Extended routes (including option to disable autoroute)
+* Extended config
+* Better Unit Test Library 
 
 # Modified files
 
@@ -57,6 +59,7 @@ These are some files that was modified or added in GoIgniter:
 * `application/core/MY_Loader.php`
 * `application/core/MY_Router.php`
 * `application/core/Go_Model.php`
+* `application/core/Unit_test.php`
 * `application/views/modules/`
 
 # The cool things
@@ -225,6 +228,9 @@ Not only database, you can also overwrite all codeigniter's library's configurat
 
 In GoIgniter, you can also extend CodeIgniter's routing by creating `application/core/config/routes.php`.
 This will override any route configuration defined in `application/config/routes.php`.
+
+Also, `$route['disable_autoroute']` is now introduced. Set it to FALSE, and no magical autorouting anymore.
+Beware, if you set `$route['disable_autoroute']`, even default controller route will not work, and you have to define `$route['']` to your `supposed-to-be-default-controller` instead.
 
 # Constants
 

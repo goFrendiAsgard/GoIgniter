@@ -1,10 +1,10 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
+// Unfortunately, this might be used before database load (i.e: in router)
+// Thus, this must be independent from database
 class Site
 {
     private $_dir_path;
-    private $_dictionary_file;
-    private $_dictionary;
 
     public function __construct()
     {
@@ -18,15 +18,31 @@ class Site
         {
             mkdir($this->_dir_path);
         }
+    }
 
-        if(!file_exists($this->_dictionary_file))
+    public function get_code_file_name($code)
+    {
+        return $this->_dir_path.'code_'.$code.'.json';
+    }
+
+    public function get_alias_file_name($alias)
+    {
+        return $this->_dir_path.'alias_'.$alias;
+    }
+
+    public function get_available_site_codes()
+    {
+        $codes = array();
+        if(file_exists($this->_dir_path))
         {
-            file_put_contents($this->_dictionary_file, json_encode($this->_dictionary));
+            $files = glob($this->_dir_path.'code_*.json');
+            foreach($files as $file)
+            {
+                $file = basename($file);
+                $codes[] = substr($file, 5, strlen($file)-10);
+            }
         }
-
-        // initiate _dictionary
-        $json = file_get_contents($this->_dictionary_file);
-        $this->_dictionary = json_decode($json, TRUE);
+        return $codes;
     }
 
     public function is_main_site()
@@ -41,13 +57,13 @@ class Site
         return !array_key_exists('hostname', $config) || $_SERVER['SERVER_NAME'] == $config['hostname'];
     }
 
-    public function get_current_site_code()
+    public function get_current_code()
     {
         // get from alias cache
         $actual_hostname = $_SERVER['SERVER_NAME'];
-        if(file_exists($this->_dir_path.'alias_'.$actual_hostname))
-        {
-            return file_get_contents($this->_dir_path.'alias_'.$actual_hostname);
+        $code = $this->get_code_by_alias($actual_hostname);
+        if($code !== NULL){
+            return $code;
         }
 
         // hostname not found, try subdomain
@@ -61,35 +77,56 @@ class Site
             $config_hostname = $config['hostname'];
             if(substr($actual_hostname, strlen($actual_hostname)-strlen($config_hostname)) == $config_hostname)
             {
-                $code = substr($actual_hostname, 0, strlen($actual_hostname)-strlen($config_hostname));
-                if(array_key_exists($code, $this->_dictionary))
+                $code = substr($actual_hostname, 0, strlen($actual_hostname)-strlen($config_hostname)-1);
+                if(file_exists($this->get_code_file_name($code)))
                 {
                     return $code;
                 }
             }
         }
-
         return NULL;
+    }
+
+    public function get_code_by_alias($alias)
+    {
+        if(file_exists($this->get_alias_file_name($alias)))
+        {
+            return file_get_contents($this->get_alias_file_name($alias));
+        }
+        return NULL;
+    }
+
+    public function get_aliases_by_code($code)
+    {
+        $aliases = array();
+        if(file_exists($this->get_code_file_name($code)))
+        {
+            $aliases = json_decode(file_get_contents($this->get_code_file_name($code)));
+        }
+        return $aliases;
     }
 
     public function add_site($code, $aliases=array())
     {
         if(preg_match('/[a-z]+/si', $code))
         {
-            if(!array_key_exists($code, $this->_dictionary))
+            if(!file_exists($this->get_code_file_name($code)))
             {
+                $new_aliases = array();
                 foreach($aliases as $alias)
                 {
                     if(!file_exists($this->_dir_path.'alias_'.$alias))
                     {
                         $new_aliases[] = $alias;
-                        file_put_contents($this->_dir_path.'alias_'.$alias, $code);
+
+                        // write alias file
+                        file_put_contents($this->get_alias_file_name($alias), $code);
                     }
                 }
-                $this->_dictionary[$code] = $new_aliases;
 
-                // save dictionary
-                file_put_contents($this->_dictionary_file, json_encode($this->_dictionary));
+                // write code file
+                $content = json_encode($new_aliases);
+                file_put_contents($this->get_code_file_name($code), $content);
             }
         }
     }
@@ -97,53 +134,53 @@ class Site
     public function delete_site($code)
     {
         // delete alias cache
-        $aliases = $this->_dictionary[$code];
+        $aliases = $this->get_aliases_by_code($code);
         foreach($aliases as $alias)
         {
-            unlink($this->_dir_path.'alias_'.$alias);
+            // delete alias file
+            $this->delete_site_alias($code, $alias);
         }
-        unset($this->_dictionary[$code]);
 
-        // save dictionary
-        file_put_contents($this->_dictionary_file, json_encode($this->_dictionary));
+        // delete code file
+        if(file_exists($this->get_code_file_name($code)))
+        {
+            unlink($this->get_code_file_name($code));
+        }
     }
 
     public function add_site_alias($code, $alias)
     {
-        if(!file_exists($this->_dir_path.'alias_'.$alias))
+        if(!file_exists($this->get_alias_file_name($alias)))
         {
             // add alias cache
-            file_put_contents($this->_dir_path.'alias_'.$alias, $code);
+            file_put_contents($this->get_alias_file_name($alias), $code);
 
-            // add dictionary
-            $this->_dictionary[$code][] = $alias;
-
-            // save dictionary
-            file_put_contents($this->_dictionary_file, json_encode($this->_dictionary));
+            $aliases = $this->get_aliases_by_code($code);
+            $aliases[] = $alias;
+            file_put_contents($this->get_code_file_name($code), json_encode($aliases));
         }
     }
 
-    public function remove_site_alias($code, $alias)
+    public function delete_site_alias($code, $alias)
     {
-        if(file_exists($this->_dir_path.'alias_'.$alias))
+        if(file_exists($this->get_alias_file_name($alias)))
         {
             // remove alias cache
-            unlink($this->_dir_path.'alias_'.$alias);
+            unlink($this->get_alias_file_name($alias));
 
             // rewrite file
-            $aliases = $this->_dictionary[$code];
+            $aliases = $this->get_aliases_by_code($code);
             $new_aliases = array();
             foreach($aliases as $old_alias)
             {
                 if($old_alias != $alias)
                 {
-                    $new_aliases[] = $alias;
+                    $new_aliases[] = $old_alias;
                 }
             }
-            $this->_dictionary[$code] = $new_aliases;
 
             // save dictionary
-            file_put_contents($this->_dictionary_file, json_encode($this->_dictionary));
+            file_put_contents($this->get_code_file_name($code), json_encode($new_aliases));
         }
     }
 

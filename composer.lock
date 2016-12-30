@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "58106d6f8d4f3e531c3232e53f51fd6c",
-    "content-hash": "61d05a7f9c19fe6bc27c7f36a010ec39",
+    "hash": "93e49cbf30e5dc3e59302bbb4a9d2e98",
+    "content-hash": "a0e6a7913d8e0708ac3c5ef608586b83",
     "packages": [],
     "packages-dev": [
         {
@@ -61,53 +61,6 @@
                 "instantiate"
             ],
             "time": "2015-06-14 21:17:01"
-        },
-        {
-            "name": "kenjis/ci-phpunit-test",
-            "version": "v0.13.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/kenjis/ci-phpunit-test.git",
-                "reference": "5536b66461ac124df8146a5736923d4b094beff6"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/kenjis/ci-phpunit-test/zipball/5536b66461ac124df8146a5736923d4b094beff6",
-                "reference": "5536b66461ac124df8146a5736923d4b094beff6",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.4.0"
-            },
-            "replace": {
-                "nikic/php-parser": "2.1.0"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.0.x-dev"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Kenji Suzuki",
-                    "homepage": "https://github.com/kenjis"
-                }
-            ],
-            "description": "An easier way to use PHPUnit with CodeIgniter 3.x",
-            "homepage": "http://kenjis.github.io/ci-phpunit-test/",
-            "keywords": [
-                "codeigniter",
-                "monkey patch",
-                "phpunit",
-                "test",
-                "unit testing"
-            ],
-            "time": "2016-11-20 12:00:54"
         },
         {
             "name": "mikey179/vfsStream",
