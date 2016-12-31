@@ -14,6 +14,7 @@ class Test_Controller extends \CI_Controller
         $this->load->helper('inflector');
         $this->unit = new \Unit_test();
 
+        // Run all class with "test" prefix
         foreach(get_class_methods($this) as $method)
         {
             if(substr($method,0,4) == 'test')
@@ -79,14 +80,34 @@ class Test_Controller extends \CI_Controller
         $this->global_tearDown();
         $this->global_setup_and_tearDown();
 
-        // create the result
-        $result = $this->unit->result();
+        // create the result test
+        $result = $this->unit->results;
         $result_count = count($result);
         $passed_count = 0;
         $failed_count = 0;
-        foreach($result as $row)
+
+        // merge separator as header, and  count passed/failed count
+        for($i=0; $i<count($result); $i++)
         {
-            if($row['Result'] == 'Passed')
+            // add Header based on separator
+            $result[$i]['header'] = array_key_exists($i, $separator)?
+                $separator[$i] : '';
+
+            // truncate Test & Expected value if necessary
+            $rowTest = $result[$i]['test'];
+            $rowExpected = $result[$i]['expected'];
+            if($rowTest == $rowExpected && strlen($rowTest) > 60)
+            {
+                if(strpos($rowExpected, '<') === FALSE && strpos($rowExpected, '<') === FALSE)
+                {
+                    $truncated = substr($rowTest, 0, 56).' ...';
+                    $result[$i]['test'] = $truncated;
+                    $result[$i]['expected'] = $truncated;
+                }
+            }
+
+            // calculate passed & failed count
+            if($result[$i]['result'] == 'passed')
             {
                 $passed_count ++;
             }
@@ -95,8 +116,9 @@ class Test_Controller extends \CI_Controller
                 $failed_count ++;
             }
         }
+
+        // send to view
         $data = array(
-            'separator' => $separator,
             'result' => $result,
             'total' => $result_count,
             'passed' => $passed_count,

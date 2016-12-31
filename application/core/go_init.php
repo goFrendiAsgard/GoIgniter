@@ -4,6 +4,7 @@ spl_autoload_register(function ($class)
 {
     $class_parts = explode('\\', trim($class, '\\'));
 
+    $file_name = NULL;
     if(count($class_parts) > 1 && ($class_parts[0] == 'App' || $class_parts[0] == 'Modules') )
     {
         $classPrefix = $class_parts[0];
@@ -24,32 +25,31 @@ spl_autoload_register(function ($class)
         $file_name = $classPrefix == 'Modules'?
             MODULEPATH . implode('/', $class_parts):
             APPPATH . implode('/', $class_parts);
-
-        if(file_exists($file_name) && is_readable($file_name))
-        {
-            require_once($file_name);
-        }
     }
-    else
+    else if(count($class_parts) == 1)
     {
         // CI
         if(substr($class, 0, 3) == 'CI_')
         {
             $file_name = BASEPATH . 'core/' . substr($class,3) . '.php';
-            if(file_exists($file_name) && is_readable($file_name))
-            {
-                require_once($file_name);
-            }
+        }
+        // Twig
+        else if(substr($class, 0, 5) == 'Twig_')
+        {
+            $file_name = substr($class, 5);
+            $file_name = TWIGPATH . str_replace(array('_', '\0'), array(DIRECTORY_SEPARATOR, ''), $file_name) . '.php';
         }
         // Core classes
         else
         {
             $file_name = APPPATH . 'core/' . $class . '.php';
-            if(file_exists($file_name) && is_readable($file_name))
-            {
-                require_once($file_name);
-            }
         }
+    }
+
+    // include the file if necessary and possible
+    if($file_name !== NULL && file_exists($file_name) && is_file($file_name) && is_readable($file_name))
+    {
+        require_once($file_name);
     }
 
 });
@@ -224,9 +224,29 @@ if(!function_exists('view'))
             show_error('Unable to load the requested file: '.$file_name);
         }
 
-        // call the original load view
+        // call the original $_ci->load->view()
         $_ci =& get_instance();
-        return $_ci->load->view($view, $vars, $return);
+        $template_string = $_ci->load->view($view, $vars, TRUE);
+
+        // summon twig
+        $loader = new Twig_Loader_Filesystem(VIEWPATH);
+        $twig = new Twig_Environment($loader, array(
+            'cache' => VIEWPATH.'__cache'.DIRECTORY_SEPARATOR,
+        ));
+        $template = $twig->createTemplate($template_string);
+        $final_result = $template->render($vars);
+
+        if($return)
+        {
+            return $final_result;
+        }
+        else
+        {
+		    ob_start();
+            echo $final_result;
+			$_ci->output->append_output(ob_get_contents());
+			@ob_end_clean();
+        }
     }
 }
 

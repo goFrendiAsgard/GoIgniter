@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html>
 <head>
     <style>
         body
@@ -6,13 +8,29 @@
             padding-top: 50px;
             padding-bottom: 50px;
         }
+        code
+        {
+            font-size: smaller;
+            font-family: monospace, courier;
+        }
         .passed
         {
-            color:green;
+            color:#0C0;
         }
         .failed
         {
-            color:red;
+            color:#C00;
+        }
+        .summary
+        {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            height: 30px;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background-color: #EEE;
+            border-bottom: 1px solid #CCC;
         }
         .result-table
         {
@@ -32,26 +50,13 @@
             text-align: left;
             border: none;
         }
-        .summary
-        {
-            padding-top: 10px;
-            padding-bottom: 10px;
-            height: 30px;
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background-color: #CCC;
-        }
-        code
-        {
-            font-size: smaller;
-            font-family: monospace, courier;
-        }
     </style>
 </head>
 <body>
     <div class="summary">
-        <?=$total?> test performed. <span class="passed"><?=$passed?> passed</span>, <span class="failed"><?=$failed?> failed.</span>
+        {{ total }} test performed.
+        <span class="passed">{{ passed }} passed</span>,
+        <span class="failed">{{ failed }} failed.</span>
     </div>
     <table class="result-table">
         <?php
@@ -64,42 +69,24 @@
                 <th>Notes</th>
             </tr>';
 
-            for($i=0; $i<count($result); $i++)
+            foreach($result as $row)
             {
-                if(array_key_exists($i, $separator))
+                if($row['header'] != '')
                 {
-                    echo '<tr><th class="separator" colspan="6">' . $separator[$i] . '</th></tr>';
+                    echo '<tr><th class="separator" colspan="6">' . $row['header'] . '</th></tr>';
                     echo $header;
                 }
 
-                // get row and print row content
-                $row = $result[$i];
-
-                $rowTest = $row['Test'];
-                $rowExpected = $row['Expected'];
-                if($row['Test'] == $row['Expected'] && strlen($row['Test']) > 60)
-                {
-                    if(strpos($rowExpected, '<') === FALSE && strpos($rowExpected, '<') === FALSE)
-                    {
-                        $truncated = substr($row['Test'], 0, 56).' ...';
-                        $rowTest = $truncated;
-                        $rowExpected = $truncated;
-                    }
-                }
-
                 echo '<tr>';
-                echo '<td>' . $row['Test Name'] . '</td>';
-                echo '<td><code>' . $row['File Name'] . ' : ' . $row['Line Number'] . '</code></td>';
-                echo '<td><b>' . $row['Test Datatype'] . '</b>'
-                    . (strlen($rowTest) > 5 ? '<br />' : ' ')
-                    . '<code>'. ($rowTest) . '</code></td>';
-                echo '<td><b>' . $row['Expected Datatype'] . '</b>'
-                    . (strlen($rowExpected) > 5 ? '<br />' : ' ')
-                    . '<code>'. ($rowExpected) . '</code></td>';
-                echo '<td class="' . ($row['Result'] == 'Passed' ? 'passed' : 'failed') . '">' . $row['Result'] . '</td>';
-                echo '<td>' . $row['Notes'] . '</td>';
+                echo '<td>' . $row['test_name'] . '</td>';
+                echo '<td><code>' . $row['file'] . ' : ' . $row['line'] . '</code></td>';
+                echo '<td><b>' . $row['test_datatype'] . '</b> ' . '<code>'. $row['test'] . '</code></td>';
+                echo '<td><b>' . $row['res_datatype'] . '</b> ' . '<code>'. $row['result'] . '</code></td>';
+                echo '<td class="' . $row['result'] . '">' . $row['result'] . '</td>';
+                echo '<td>' . $row['notes'] . '</td>';
                 echo '</tr>';
             }
         ?>
     </table>
 </body>
+</html>
