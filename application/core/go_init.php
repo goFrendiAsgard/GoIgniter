@@ -228,6 +228,11 @@ if(!function_exists('view'))
         $_ci =& get_instance();
         $template_string = $_ci->load->view($view, $vars, TRUE);
 
+        if(!file_exists(VIEWPATH.'__cache'.DIRECTORY_SEPARATOR))
+        {
+            mkdir(VIEWPATH.'__cache'.DIRECTORY_SEPARATOR);
+        }
+
         // summon twig
         $loader = new Twig_Loader_Filesystem(VIEWPATH);
         $twig = new Twig_Environment($loader, array(
