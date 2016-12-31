@@ -28,6 +28,7 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 
 # GoIgniter Files
 /application/views/modules/*
+/application/views/__cache/*
 /assets/modules/*
 /application/controllers/Welcome.php
 /application/core/config/config.php
