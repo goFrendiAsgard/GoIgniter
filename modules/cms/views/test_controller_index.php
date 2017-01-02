@@ -58,35 +58,31 @@
         <span class="passed">{{ passed }} passed</span>,
         <span class="failed">{{ failed }} failed.</span>
     </div>
+
     <table class="result-table">
-        <?php
-            $header = '<tr>
-                <th>Test Name</th>
-                <th>Location</th>
-                <th>Test</th>
-                <th>Expected</th>
-                <th>Result</th>
-                <th>Notes</th>
-            </tr>';
-
-            foreach($result as $row)
-            {
-                if($row['header'] != '')
-                {
-                    echo '<tr><th class="separator" colspan="6">' . $row['header'] . '</th></tr>';
-                    echo $header;
-                }
-
-                echo '<tr>';
-                echo '<td>' . $row['test_name'] . '</td>';
-                echo '<td><code>' . $row['file'] . ' : ' . $row['line'] . '</code></td>';
-                echo '<td><b>' . $row['test_datatype'] . '</b> ' . '<code>'. $row['test'] . '</code></td>';
-                echo '<td><b>' . $row['res_datatype'] . '</b> ' . '<code>'. $row['result'] . '</code></td>';
-                echo '<td class="' . $row['result'] . '">' . $row['result'] . '</td>';
-                echo '<td>' . $row['notes'] . '</td>';
-                echo '</tr>';
-            }
-        ?>
+        {% set header = '<tr>
+            <th>Test Name</th>
+            <th>Location</th>
+            <th>Test</th>
+            <th>Expected</th>
+            <th>Result</th>
+            <th>Notes</th>
+        </tr>' %}
+        {% for row in result %}
+            {% if row.header != '' %}
+                <tr><th class="separator" colspan="6">{{ row.header }}</th></tr>
+                {{ header | raw }}
+            {% endif %}
+            <tr>
+            <td> {{ row.test_name }}</td>
+            <td><code>{{ row.file }} : {{ row.line }}</code></td>
+            <td><b>{{ row.test_datatype }}</b> <code>{{ row.test }}</code></td>
+            <td><b>{{ row.res_datatype }}</b> <code>{{ row.expected }}</code></td>
+            <td class="{{ row.result }}">{{ row.result }}</td>
+            <td>{{ row.notes|nl2br }}</td>
+            </tr>
+        {% endfor %}
     </table>
+
 </body>
 </html>

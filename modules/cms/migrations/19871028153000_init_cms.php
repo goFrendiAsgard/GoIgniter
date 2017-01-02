@@ -5,6 +5,54 @@ class Migration_Init_cms extends CI_Migration {
     public function up()
     {
         ////////////////////////////////////////////////////////////
+        // Create test_node
+        ////////////////////////////////////////////////////////////
+        $this->dbforge->add_field(array(
+            'id' => array(
+                'type' => 'INT',
+                'constraint' => 20,
+                'unsigned' => TRUE,
+                'auto_increment' => TRUE
+            ),
+            'code' => array(
+                'type' => 'VARCHAR',
+                'constraint' => 255,
+            ),
+            'parent_id' => array(
+                'type' => 'INT',
+                'constraint' => 20,
+                'unsigned' => TRUE,
+                'null' => TRUE,
+            ),
+            'child_count' => array(
+                'type' => 'INT',
+                'constraint' => 20,
+                'unsigned' => TRUE,
+                'null' => TRUE,
+            ),
+            '_deleted' => array(
+                'type' => 'INT',
+                'constraint' => 20,
+                'unsigned' => TRUE,
+                'null' => TRUE,
+            ),
+            '_created_at' => array(
+                'type' => 'DATETIME',
+                'null' => TRUE,
+            ),
+            '_updated_at' => array(
+                'type' => 'DATETIME',
+                'null' => TRUE,
+            ),
+            '_deleted_at' => array(
+                'type' => 'DATETIME',
+                'null' => TRUE,
+            ),
+        ));
+        $this->dbforge->add_key('id', TRUE);
+        $this->dbforge->create_table('test_node');
+
+        ////////////////////////////////////////////////////////////
         // Create module
         ////////////////////////////////////////////////////////////
         $this->dbforge->add_field(array(
@@ -200,5 +248,6 @@ class Migration_Init_cms extends CI_Migration {
         $this->dbforge->drop_table('cms_site_alias');
         $this->dbforge->drop_table('cms_site');
         $this->dbforge->drop_table('cms_module');
+        $this->dbforge->drop_table('test_node');
     }
 }

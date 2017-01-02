@@ -3,9 +3,10 @@ namespace Modules\Cms\Controllers;
 
 use \Module_Migrator;
 use \Site;
-use \Modules\Cms\Models\Genesis;
 use \Modules\Cms\Test_Controller;
 use \Modules\Cms\Mutator;
+use \Modules\Cms\Models\Genesis;
+use \Modules\Cms\Models\Test_Node;
 
 class Test extends Test_Controller 
 {
@@ -120,7 +121,7 @@ class Test extends Test_Controller
         if($db_password === NULL) $db_password = 'toor';
         if($db_database === NULL) $db_database = 'tests';
 
-        $notes = 'You can pass user, password, and database get query to override database setting, i.e: ?user=root&password=&database=mydb. By default this test use Mysql, user:root, password:toor, database:tests. The database should be empty';
+        $notes = 'You can pass user, password, and database get query to override database setting, i.e: ?user=root&password=&database=mydb.'. PHP_EOL .'By default this test use Mysql, user:root, password:toor, database:tests. '. PHP_EOL .'Please make sure that your testing database is empty';
 
         // Test $genesis->setup()
         $genesis->set_db_config('username', $db_user);
@@ -401,6 +402,119 @@ class Test extends Test_Controller
         $expected_result = 'nyan nyan nyan gude tama';
         $test = run_routed_module_url('nyan/nyan?a=gude&b=tama', TRUE);
         $this->unit->run($test, $expected_result, 'Run Routed Module URL: nyan/nyan?a=gude&b=tama');
+    }
+
+    function test_orm()
+    {
+        $array = array(
+            'code' => 'Ned Stark',
+            'children' => array(
+                array('code' => 'Robb Stark'),
+                array('code' => 'Jon Snow'),
+                array('code' => 'Sansa Stark'),
+                array('code' => 'Arya Stark'),
+                array('code' => 'Brandon Stark'),
+            ), 
+            'parent' => array('code' => 'Rickard Stark'),
+        );
+
+        // Try to create test_node with hybrid parameters (array & object)
+        $obj = $array;
+        $obj['children'][0] = new Test_Node($obj['children'][0]);
+        $test_node = new Test_Node($obj);
+
+        // test this test_node
+        $expected_result = 'Ned Stark';
+        $test = $test_node->code;
+        $this->unit->run($test, $expected_result, 'Do $test_node = new Test_Node($obj); At this point, $test_node\'s code should be Ned Stark');
+
+        // test children of test_node
+        $expected_result = 5;
+        $test = count($test_node->children);
+        $this->unit->run($test, $expected_result, '$test_node should has 5 children');
+
+        // test parent of test_node
+        $expected_result = 'Rickard Stark';
+        $test = $test_node->parent->code;
+        $this->unit->run($test, $expected_result, '$test_node parent should be Rickard Stark');
+
+        // test as_array
+        $expected_result = $array;
+        $test = $test_node->as_array();
+        $this->unit->run($test, $expected_result, '$test_node->as_array() should return the correct array');
+
+        // saving record
+        $test_node->save();
+        $expected_result = 7;
+        $test = $this->db->count_all('test_node');
+        $this->unit->run($test, $expected_result, '$test_node->save() should save 7 records');
+
+        // primary keys should be set, foreign key should also be set
+        $expected_result = 2;
+        $test = $test_node->id;
+        $this->unit->run($test, $expected_result, '$test_node->id should yield 2');
+        $test = $test_node->children[0]->parent_id;
+        $this->unit->run($test, $expected_result, '$test_node->children[0]->parent_id should yield 2');
+
+        $expected_result = 1;
+        $test = $test_node->parent->id;
+        $this->unit->run($test, $expected_result, '$test_node->parent->id should yield 1');
+
+        $test = $test_node->parent_id;
+        $this->unit->run($test, $expected_result, '$test_node->parent_id should also yield 1');
+        
+        $expected_result = 3;
+        $test = $test_node->children[0]->id;
+        $this->unit->run($test, $expected_result, '$test_node->children[0]->id should yield 3');
+
+        // _created_at should be set, _deleted should be FALSE
+        $expected_result = TRUE;
+        $created_at = $test_node->_created_at;
+        $test_created_at = $created_at != NULL;
+        $test_deleted = TRUE;
+        $test_equality = TRUE;
+        $all_nodes = array_merge(array($test_node, $test_node->parent), $test_node->children); 
+        foreach($all_nodes as $node)
+        {
+            if($node->_created_at == NULL)
+            {
+                $test_created_at = FALSE;
+            }
+            if($node->_created_at != $created_at)
+            {
+                $test_equality = FALSE;
+            }
+            if($node->_deleted == TRUE)
+            {
+                $test_deleted = FALSE;
+            }
+        }
+        $this->unit->run($test_created_at, $expected_result, 'Every node\'s _created_at should not be NULL');
+        $this->unit->run($test_equality, $expected_result, 'Every node\'s _created_at should be equal');
+        $this->unit->run($test_deleted, $expected_result, 'Every node\'s _deleted should not be FALSE');
+
+        // delete
+        $test_node->children[0]->delete();
+
+        $expected_result = TRUE;
+        $test = $test_node->children[0]->_deleted;
+        $this->unit->run($test, $expected_result, 'node Robb _deleted should be TRUE');
+        
+        $expected_result = TRUE;
+        $test = $test_node->children[0]->_deleted_at != NULL;
+        $this->unit->run($test, $expected_result, 'node Robb _deleted_at should not be NULL');
+
+        // purge
+        $test_node->children[0]->purge();
+
+        $expected_result = 6;
+        $test = $this->db->count_all('test_node');
+        $this->unit->run($test, $expected_result, 'node Robb _purged, only 6 record available in the table now');
+
+
+        // test findById
+        //var_dump(Test_Node::find_by_id(1)->as_array());
+
     }
 
 }

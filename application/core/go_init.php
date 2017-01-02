@@ -193,21 +193,24 @@ if(!function_exists('view'))
     function view($view, $vars = array(), $return = FALSE)
     {
         cache_modules();
-        $view = trim($view, '.php') . '.php';
+        $view = $view;
         $view_parts = explode('/', $view);
 
         $found = FALSE;
         // is it on modules?
         if(count($view_parts) > 1)
         {
-            $file_name = MODULEPATH . $view_parts[0] . '/views/' . implode('/', array_slice($view_parts, 1));
-            if(file_exists($file_name) && is_readable($file_name)){
-                $cached_file_name = VIEWPATH . 'modules/' . implode('/', $view_parts);
+            foreach(array('', '.php', '.html') as $ext)
+            {
+                $file_name = MODULEPATH . $view_parts[0] . '/views/' . implode('/', array_slice($view_parts, 1)) . $ext;
+                if(file_exists($file_name) && is_file($file_name) && is_readable($file_name)){
+                    $cached_file_name = VIEWPATH . 'modules/' . implode('/', $view_parts).$ext;
 
-                $found = file_exists($cached_file_name);
+                    $found = file_exists($cached_file_name);
 
-                // adjust the view
-                $view = 'modules/' . $view;
+                    // adjust the view
+                    $view = 'modules/' . $view . $ext;
+                }
             }
         }
         // No? then it must be on APPPATH
@@ -235,6 +238,7 @@ if(!function_exists('view'))
 
         // summon twig
         $loader = new Twig_Loader_Filesystem(VIEWPATH);
+        $loader->addPath(VIEWPATH.'modules/');
         $twig = new Twig_Environment($loader, array(
             'cache' => VIEWPATH.'__cache'.DIRECTORY_SEPARATOR,
         ));

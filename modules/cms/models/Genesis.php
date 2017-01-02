@@ -69,6 +69,7 @@ class Genesis extends \CI_Model
             }
         }
         // surpress any error, we test connection's validity by using is_db_valid
+        $config['pconnect'] = FALSE;
         $this->_database = @$this->load->database($config, TRUE);
         return $this->_database;
     }
