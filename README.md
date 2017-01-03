@@ -260,6 +260,19 @@ namespace Modules\Cms\Models;
 
 class Test_Node extends \Go_Model
 {
+    // $_table will be automatically determined by using class name
+    protected $_columns = ['code']; // The columns we have 
+}
+```
+
+But let's make a full featured one for now:
+
+```php
+<?php // file location: modules/cms/models/Test_Node.php
+namespace Modules\Cms\Models;
+
+class Test_Node extends \Go_Model
+{
     protected $_table = 'test_node';        // Table's name
     protected $_id = 'id';                  // Primary key
     protected $_created_at = 'created_at';  // field for creation date logging
@@ -343,8 +356,11 @@ class Test extends CI_Controller
         var_dump(count($node_list)); // should be 6
 
         // ORM is cool, but I want to try query
-        $node_list = Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
+        $node_list = Test_Node::find_by_query("SELECT * FROM test_node WHERE code LIKE '%snow%'")
         var_dump($node_list[0]->code); // And yeah, Jon Snow
+
+        // Note: This will also work
+        // $node_list = Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
 
     }
 }

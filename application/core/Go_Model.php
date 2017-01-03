@@ -62,6 +62,15 @@ class Go_Model extends CI_Model
             }
         }
 
+        foreach($this->_parents as $alias=>$config)
+        {
+            $foreign_key = $config['foreign_key'];
+            if(!in_array($foreign_key, $columns))
+            {
+                $columns[] = $foreign_key;
+            }
+        }
+
         $this->_allowed_columns = $columns;
     }
 
@@ -211,6 +220,11 @@ class Go_Model extends CI_Model
 
     public function __construct($obj=array(), &$db = NULL)
     {
+        if(empty($this->_table))
+        {
+            $this->_table = get_called_class();
+        }
+
         // database
         $this->_set_allowed_columns();
         if($db != NULL)
@@ -339,17 +353,26 @@ class Go_Model extends CI_Model
                 // if $pk exists, then update, otherwise insert. Add timestamp as needed
                 if($pk !== NULL)
                 {
-                    $simple_array[$this->_updated_at] = $timestamp;
-                    $this->set($this->_updated_at, $timestamp);
+                    if($this->_updated_at != '')
+                    {
+                        $simple_array[$this->_updated_at] = $timestamp;
+                        $this->set($this->_updated_at, $timestamp);
+                    }
                     $this->_db->update($table, $simple_array, array($pk_field=>$pk));
                 }
                 else
                 {
                     // add timestamp and default _deleted value
-                    $simple_array[$this->_created_at] = $timestamp;
-                    $this->__set($this->_created_at, $timestamp);
-                    $simple_array[$this->_deleted] = FALSE;
-                    $this->__set($this->_deleted, FALSE);
+                    if($this->_created_at != '')
+                    {
+                        $simple_array[$this->_created_at] = $timestamp;
+                        $this->__set($this->_created_at, $timestamp);
+                    }
+                    if($this->_deleted != '')
+                    {
+                        $simple_array[$this->_deleted] = FALSE;
+                        $this->__set($this->_deleted, FALSE);
+                    }
                     // insert
                     $this->_db->insert($table, $simple_array);
                     $pk = $this->_db->insert_id();
@@ -412,6 +435,10 @@ class Go_Model extends CI_Model
     // $propagate inform whether it is needed to update parent & children as well
     public function _do_delete(&$success = TRUE, &$error_message = '', $propagate = TRUE)
     {
+        if($this->_deleted == '')
+        {
+            return $this->_do_purge($success, $error_message, $propagate);
+        }
         // get table, pk, pk_field, and timestamp
         $table = $this->_table;
         $pk_field = $this->_id;
@@ -435,10 +462,16 @@ class Go_Model extends CI_Model
             $simple_array = $this->as_array(TRUE);
 
             // add timestamp, and update deleted
-            $simple_array[$this->_deleted_at] = $timestamp;
-            $this->__set($this->_deleted_at, $timestamp);
-            $simple_array[$this->_deleted] = TRUE;
-            $this->__set($this->_deleted, TRUE);
+            if($this->_deleted_at != '')
+            {
+                $simple_array[$this->_deleted_at] = $timestamp;
+                $this->__set($this->_deleted_at, $timestamp);
+            }
+            if($this->_deleted != '')
+            {
+                $simple_array[$this->_deleted] = TRUE;
+                $this->__set($this->_deleted, TRUE);
+            }
             $this->_db->update($table, $simple_array, array($pk_field=>$pk));
 
             // update foreign keys of children
@@ -730,21 +763,26 @@ class Go_Model extends CI_Model
         return $result;
     }
 
-    public static function find_by_query($query, $db = NULL)
+    public static function find_by_query($query)
     {
-        // init db and get config
+        // get class name 
         $config = static::_get_static_config();
         $class = $config['class'];
-        if($db == NULL)
+        
+        // execute query
+        if(is_string($query))
         {
             $db = $config['default_db'];
+            $query = $db->query($query);
         }
-        $table = $config['table'];
-        $id_field = $config['id'];
+        else if(method_exists($query, 'get'))
+        {
+            $query = $query->get();
+        }
 
         // run query and parse the result
         $return = array();
-        foreach($query->get()->result_array() as $row)
+        foreach($query->result_array() as $row)
         {
             $return[] = new $class($row, $db);
         }

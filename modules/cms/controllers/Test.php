@@ -543,6 +543,16 @@ class Test extends Test_Controller
         $expected_result = 'Jon Snow';
         $test = $node_list[0]->code;
         $this->unit->run($test, $expected_result, 'Test_Node::find_by_query($this->db->select(\'*\')->from(\'test_node\')->like(\'code\', \'snow\')); should give you Jon Snow');
+
+        $node_list = Test_Node::find_by_query($this->db->query("SELECT * FROM go_test_node WHERE code LIKE '%snow%'"));
+        $expected_result = 'Jon Snow';
+        $test = $node_list[0]->code;
+        $this->unit->run($test, $expected_result, 'Test_Node::find_by_query($this->db->query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'"))');
+        
+        $node_list = Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE '%snow%'");
+        $expected_result = 'Jon Snow';
+        $test = $node_list[0]->code;
+        $this->unit->run($test, $expected_result, 'Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'")');
     }
 
 }
