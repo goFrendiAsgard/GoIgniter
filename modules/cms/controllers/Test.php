@@ -513,7 +513,7 @@ class Test extends Test_Controller
 
 
         // test findById
-        //var_dump(Test_Node::find_by_id(1)->as_array());
+        var_dump(Test_Node::find_by_id(1)->as_array());
 
     }
 

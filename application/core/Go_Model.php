@@ -137,6 +137,7 @@ class Go_Model extends CI_Model
                     $this->_values[$key][] = $new_child;
                 }
             }
+
             // parents 
             else if(array_key_exists($key, $this->_parents))
             {
@@ -570,39 +571,57 @@ class Go_Model extends CI_Model
         return array('success' => $success, 'error_message' => $error_message);
      }
 
-    protected static $_config_cached;
-    protected static $_config;
+    ////////////////////////////////////////////////////////////////
+    //
+    // Static properties and methods 
+    //
+    ////////////////////////////////////////////////////////////////
+
+    // all configurations should live here
+    protected static $_configs;
+
     protected static function _get_static_config()
     {
-        if(static::$_config_cached === TRUE)
+        $class = get_called_class();
+
+        // create self::$_configs if not exists
+        if(!isset(self::$_configs))
         {
-            return static::$_config;
+            self::$_configs = array();
         }
 
-        $db = NULL;
-        $class = get_called_class();
-        $instance = new $class(array(), $db);
-        $info = $instance->_get_config();
-        unset($instance);
+        // if self::$_configs contains configuration of this class, then get it, otherwise create one
+        if(isset(self::$_configs) && array_key_exists($class, self::$_configs))
+        {
+            $config = self::$_configs[$class];
+        }
+        else
+        {
+            $db = NULL;
+            $instance = new $class(array(), $db);
+            $config = $instance->_get_config();
+            unset($instance);
 
-        $info['class'] = $class;
-        $info['default_db'] = $db;
-        static::$_config = $info;
-        static::$_config_cached = TRUE;
-        return static::$_config;
+            $config['class'] = $class;
+            $config['default_db'] = $db;
+            self::$_configs[$class] = $config;
+        }
+
+        // return the configuration
+        return self::$_configs[$class];
     }
 
     public static function find_by_id($id, &$db = NULL)
     {
-        // init db and get info
-        $info = static::_get_static_config();
-        $class = $info['class'];
+        // init db and get config
+        $config = static::_get_static_config();
+        $class = $config['class'];
         if($db == NULL)
         {
-            $db = $info['default_db'];
+            $db = $config['default_db'];
         }
-        $table = $info['table'];
-        $id_field = $info['id'];
+        $table = $config['table'];
+        $id_field = $config['id'];
 
         // prepare query
         $query = $db->select('*')
@@ -620,15 +639,15 @@ class Go_Model extends CI_Model
 
     public static function find_all($limit=1000, $offset=0, $db = NULL)
     {
-        // init db and get info
-        $info = static::_get_static_config();
-        $class = $info['class'];
+        // init db and get config
+        $config = static::_get_static_config();
+        $class = $config['class'];
         if($db == NULL)
         {
-            $db = $info['default_db'];
+            $db = $config['default_db'];
         }
-        $table = $info['table'];
-        $id_field = $info['id'];
+        $table = $config['table'];
+        $id_field = $config['id'];
 
         // prepare query
         $query = $db->select('*')
@@ -641,15 +660,15 @@ class Go_Model extends CI_Model
 
     public static function find_where($key, $value = NULL, $escape = NULL, $db = NULL)
     {
-        // init db and get info
-        $info = static::_get_static_config();
-        $class = $info['class'];
+        // init db and get config
+        $config = static::_get_static_config();
+        $class = $config['class'];
         if($db == NULL)
         {
-            $db = $info['default_db'];
+            $db = $config['default_db'];
         }
-        $table = $info['table'];
-        $id_field = $info['id'];
+        $table = $config['table'];
+        $id_field = $config['id'];
 
         // prepare query
         $query = $db->select('*')
@@ -662,15 +681,15 @@ class Go_Model extends CI_Model
 
     public static function find_by_query($query, $db = NULL)
     {
-        // init db and get info
-        $info = static::_get_static_config();
-        $class = $info['class'];
+        // init db and get config
+        $config = static::_get_static_config();
+        $class = $config['class'];
         if($db == NULL)
         {
-            $db = $info['default_db'];
+            $db = $config['default_db'];
         }
-        $table = $info['table'];
-        $id_field = $info['id'];
+        $table = $config['table'];
+        $id_field = $config['id'];
 
         // run query and parse the result
         $return = array();
