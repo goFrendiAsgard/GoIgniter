@@ -5,11 +5,13 @@ class Test_Node extends \Go_Model
 {
     protected $_table = 'test_node';
     protected $_id = 'id';
-    protected $_created_at = '_created_at';
-    protected $_updated_at = '_updated_at';
-    protected $_deleted_at = '_deleted_at';
-    protected $_deleted = '_deleted';
+    protected $_created_at = 'created_at';
+    protected $_updated_at = 'updated_at';
+    protected $_deleted_at = 'deleted_at';
+    protected $_deleted = 'deleted';
     protected $_columns = ['code', 'parent_id', 'child_count'];
+
+    protected $code = 'default';
 
     protected $_children = array(
         'children' => array(

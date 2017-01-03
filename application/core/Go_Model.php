@@ -10,10 +10,10 @@ class Go_Model extends CI_Model
 
     protected  $_table           = '';
     protected  $_id              = 'id';
-    protected  $_created_at      = '_created_at';
-    protected  $_deleted_at      = '_deleted_at';
-    protected  $_updated_at      = '_updated_at';
-    protected  $_deleted         = '_deleted';
+    protected  $_created_at      = 'created_at';
+    protected  $_deleted_at      = 'deleted_at';
+    protected  $_updated_at      = 'updated_at';
+    protected  $_deleted         = 'deleted';
     protected  $_columns         = array();
     
     // array of associative array. Each child should has these keys:
@@ -41,7 +41,7 @@ class Go_Model extends CI_Model
 
     protected $_allowed_columns = array();
     protected $_db = NULL;
-    protected $_values = array();
+    public $_values = array();
 
     protected function _set_allowed_columns()
     {
@@ -65,18 +65,20 @@ class Go_Model extends CI_Model
         $this->_allowed_columns = $columns;
     }
 
-    protected function _data_to_entity($data, $class)
+    protected function _data_to_entity(&$data, $class)
     {
-        $this_class_name = 'Go_Model';
+        $Go_Model = 'Go_Model';
+        // if it is already instance of the class
         if($data instanceof $class)
         {
             return $data;
         }
-        else if($data instanceof $this_class_name)
+        // if it is instance of Go_Model
+        else if($data instanceof $Go_Model)
         {
-            $this_class = $this_class_name;
             $data = $data->as_array();
         }
+        // array and other datatype
         else
         {
             $data = (array) $data;
@@ -88,33 +90,47 @@ class Go_Model extends CI_Model
     {
         if(in_array($key, $this->_allowed_columns))
         {
-            
             // get from _values
             if(array_key_exists($key, $this->_values))
             {
-                return $this->_values[$key];
+                $return =& $this->_values[$key];
+                return $return;
             }
-            else
-            {
-                // if parent requested
-                if(array_key_exists($key, $this->_parents))
-                {
-
-                }
-
-                // if child requested
-                else if(array_key_exists($key, $this->_children))
-                {
-                    if($this->__get($this->_id) != NULL)
-                    {
-                        // TODO: get from database and merge it with _values
-                    }
-                }
-
-                return NULL;
-            }
+            return NULL;
         }
         return parent::__get($key);
+    }
+
+    public function _set_parent($relation_name, &$val)
+    {
+        // get parent's class name and foreign key from this table to parent
+        $relation_config = $this->_parents[$relation_name];
+        $class_name = $relation_config['model'];
+        $foreign_key = $relation_config['foreign_key'];
+
+        // create parent if not exist, or just simply return this val
+        $parent = $this->_data_to_entity($val, $class_name);
+
+        // look for parent's children configuration refering to this model
+        $parent_config = $parent->_get_config(); 
+        foreach($parent_config['children'] as $alias => $config)
+        {
+            // if it is the correct configuration, add this model as parent's child
+            if($config['model'] == $class_name && $config['foreign_key'] == $foreign_key)
+            {
+                $parent_children = $parent->__get($alias);
+                // if is exists don't need to do anything. This is also the recursive breaker
+                if(!in_array($this, $parent_children))
+                {
+                    $parent->_values[$alias][] = &$this;
+                }
+                break;
+            }
+        }
+
+        // finally after parent's value has been altered as necessary add parent's reference to this model
+        $this->_values[$relation_name] = &$parent;
+        $this->_values[$foreign_key] = $parent->_get_id();
     }
 
     public function __set($key, $val)
@@ -128,23 +144,41 @@ class Go_Model extends CI_Model
             {
                 // assigned a new column, then this must be empty first 
                 $this->_values[$key] = array();
-                $child_config = $this->_children[$key];
-                $class_name = $child_config['model'];
+                $relation_config = $this->_children[$key];
+                $class_name = $relation_config['model'];
+                $foreign_key = $relation_config['foreign_key'];
 
-                foreach($val as $child_data)
+                $child_config = $class_name::_get_static_config();
+                $child_parent_config = $child_config['parents'];
+                $true_config_found = FALSE;
+                foreach($child_parent_config as $alias=>$config)
                 {
-                    $new_child = $this->_data_to_entity($child_data, $class_name);
-                    $this->_values[$key][] = $new_child;
+                    if($config['model'] == $class_name && $config['foreign_key'] == $foreign_key)
+                    {
+                        foreach($val as $child_data)
+                        {
+                            $new_child = $this->_data_to_entity($child_data, $class_name);
+                            $new_child->_set_parent($alias, $this);
+                        }
+                        $true_config_found = TRUE;
+                        break;
+                    }
+                }
+
+                if(!$true_config_found)
+                {
+                    foreach($val as $child_data)
+                    {
+                        $new_child = $this->_data_to_entity($child_data, $class_name);
+                        $this->_values[$key][] = $new_child;
+                    }
                 }
             }
 
             // parents 
             else if(array_key_exists($key, $this->_parents))
             {
-                $parent_config = $this->_parents[$key];
-                $class_name = $parent_config['model'];
-                $parent = $this->_data_to_entity($val, $class_name);
-                $this->_values[$key] = $parent;
+                $this->_set_parent($key, $val);
             }
             // true columns
             else
@@ -178,7 +212,7 @@ class Go_Model extends CI_Model
     {
         // database
         $this->_set_allowed_columns();
-        if($this->_db != NULL)
+        if($db != NULL)
         {
             $this->_db = $db;
         }
@@ -186,12 +220,23 @@ class Go_Model extends CI_Model
         {
             $this->load->database();
             $this->_db = $this->db;
-            $db = $this->_db;
+            $db = $this->db;
+        }
+
+        // assign default values for fields if values set from properties and not started with '_'
+        foreach($this->_allowed_columns as $col)
+        {
+            if(strpos($col, '_')!== 0 && isset($this->$col))
+            {
+                $this->__set($col, $this->$col);
+                unset($this->$col);
+            }
         }
 
         // create properties
         foreach($obj as $key=>$val)
         {
+            
             $this->__set($key, $val);
         }
 
@@ -653,6 +698,11 @@ class Go_Model extends CI_Model
         $query = $db->select('*')
             ->from($table)
             ->limit($limit, $offset);
+
+        if($config['deleted'] != '')
+        {
+            $query = $query->where($config['deleted'], FALSE);
+        }
 
         $result = static::find_by_query($query);
         return $result;

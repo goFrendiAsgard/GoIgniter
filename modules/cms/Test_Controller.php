@@ -124,6 +124,7 @@ class Test_Controller extends \CI_Controller
             'passed' => $passed_count,
             'failed' => $failed_count,
         );
+        $this->output->enable_profiler();
         view('cms/test_controller_index', $data);
     }
 

@@ -30,21 +30,21 @@ class Migration_Init_cms extends CI_Migration {
                 'unsigned' => TRUE,
                 'null' => TRUE,
             ),
-            '_deleted' => array(
+            'deleted' => array(
                 'type' => 'INT',
                 'constraint' => 20,
                 'unsigned' => TRUE,
                 'null' => TRUE,
             ),
-            '_created_at' => array(
+            'created_at' => array(
                 'type' => 'DATETIME',
                 'null' => TRUE,
             ),
-            '_updated_at' => array(
+            'updated_at' => array(
                 'type' => 'DATETIME',
                 'null' => TRUE,
             ),
-            '_deleted_at' => array(
+            'deleted_at' => array(
                 'type' => 'DATETIME',
                 'null' => TRUE,
             ),

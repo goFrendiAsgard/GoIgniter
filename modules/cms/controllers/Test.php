@@ -428,6 +428,14 @@ class Test extends Test_Controller
         $test = $test_node->code;
         $this->unit->run($test, $expected_result, 'Do $test_node = new Test_Node($obj); At this point, $test_node\'s code should be Ned Stark');
 
+        $expected_result = 'Robb Stark';
+        $test = $test_node->parent->children[0]->children[0]->code;
+        $this->unit->run($test, $expected_result, 'The value of $test_node->parent->children[0]->children[0]->code should be "Robb Stark"');
+
+        $expected_result = 'Rickard Stark';
+        $test = $test_node->children[0]->parent->parent->code;
+        $this->unit->run($test, $expected_result, 'The value of $test_node->children[0]->parent->parent->code should be "Rickard Stark"');
+
         // test children of test_node
         $expected_result = 5;
         $test = count($test_node->children);
@@ -440,6 +448,12 @@ class Test extends Test_Controller
 
         // test as_array
         $expected_result = $array;
+        $expected_result['parent_id'] = NULL;
+        //$expected_result['parent']['parent_id'] = NULL;
+        for($i=0; $i<5; $i++)
+        {
+            $expected_result['children'][$i]['parent_id'] = NULL;
+        }
         $test = $test_node->as_array();
         $this->unit->run($test, $expected_result, '$test_node->as_array() should return the correct array');
 
@@ -467,42 +481,42 @@ class Test extends Test_Controller
         $test = $test_node->children[0]->id;
         $this->unit->run($test, $expected_result, '$test_node->children[0]->id should yield 3');
 
-        // _created_at should be set, _deleted should be FALSE
+        // created_at should be set, _deleted should be FALSE
         $expected_result = TRUE;
-        $created_at = $test_node->_created_at;
+        $created_at = $test_node->created_at;
         $test_created_at = $created_at != NULL;
         $test_deleted = TRUE;
         $test_equality = TRUE;
         $all_nodes = array_merge(array($test_node, $test_node->parent), $test_node->children); 
         foreach($all_nodes as $node)
         {
-            if($node->_created_at == NULL)
+            if($node->created_at == NULL)
             {
                 $test_created_at = FALSE;
             }
-            if($node->_created_at != $created_at)
+            if($node->created_at != $created_at)
             {
                 $test_equality = FALSE;
             }
-            if($node->_deleted == TRUE)
+            if($node->deleted == TRUE)
             {
                 $test_deleted = FALSE;
             }
         }
-        $this->unit->run($test_created_at, $expected_result, 'Every node\'s _created_at should not be NULL');
-        $this->unit->run($test_equality, $expected_result, 'Every node\'s _created_at should be equal');
-        $this->unit->run($test_deleted, $expected_result, 'Every node\'s _deleted should not be FALSE');
+        $this->unit->run($test_created_at, $expected_result, 'Every node\'s created_at should not be NULL');
+        $this->unit->run($test_equality, $expected_result, 'Every node\'s created_at should be equal');
+        $this->unit->run($test_deleted, $expected_result, 'Every node\'s deleted should not be FALSE');
 
         // delete
         $test_node->children[0]->delete();
 
         $expected_result = TRUE;
-        $test = $test_node->children[0]->_deleted;
-        $this->unit->run($test, $expected_result, 'node Robb _deleted should be TRUE');
+        $test = $test_node->children[0]->deleted;
+        $this->unit->run($test, $expected_result, 'node Robb deleted should be TRUE');
         
         $expected_result = TRUE;
-        $test = $test_node->children[0]->_deleted_at != NULL;
-        $this->unit->run($test, $expected_result, 'node Robb _deleted_at should not be NULL');
+        $test = $test_node->children[0]->deleted_at != NULL;
+        $this->unit->run($test, $expected_result, 'node Robb deleted_at should not be NULL');
 
         // purge
         $test_node->children[0]->purge();
@@ -513,7 +527,10 @@ class Test extends Test_Controller
 
 
         // test findById
-        var_dump(Test_Node::find_by_id(1)->as_array());
+        $expected_result = 'Rickard Stark';
+        $rickard = Test_Node::find_by_id(1);
+        $test = $rickard->code;
+        $this->unit->run($test, $expected_result, 'Node #1 is Rickard Stark');
 
     }
 
