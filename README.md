@@ -236,7 +236,7 @@ Not only database, you can also overwrite all codeigniter's library's configurat
 In GoIgniter, you can also extend CodeIgniter's routing by creating `application/core/config/routes.php`.
 This will override any route configuration defined in `application/config/routes.php`.
 
-Also, `$route['disable_autoroute']` is now introduced. Set it to FALSE, and no magical autorouting anymore.
+Also, `$route['disable_autoroute']` is now introduced. Set it to TRUE, and no magical autorouting anymore.
 Beware, if you set `$route['disable_autoroute']`, even default controller route will not work, and you have to define `$route['']` to your `supposed-to-be-default-controller` instead.
 
 # Constants
