@@ -526,12 +526,23 @@ class Test extends Test_Controller
         $this->unit->run($test, $expected_result, 'node Robb _purged, only 6 record available in the table now');
 
 
-        // test findById
-        $expected_result = 'Rickard Stark';
+        // test find_by_id
         $rickard = Test_Node::find_by_id(1);
+        $expected_result = 'Rickard Stark';
         $test = $rickard->code;
-        $this->unit->run($test, $expected_result, 'Node #1 is Rickard Stark');
+        $this->unit->run($test, $expected_result, 'Test_Node::find_by_id(1); should give you Rickard Stark');
 
+        // test find_all
+        $node_list = Test_Node::find_all();
+        $expected_result = 6;
+        $test = count($node_list);
+        $this->unit->run($test, $expected_result, 'Test_Node::find_all(); should give you 6 records');
+
+        // ORM is cool, but I want to try query
+        $node_list = Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
+        $expected_result = 'Jon Snow';
+        $test = $node_list[0]->code;
+        $this->unit->run($test, $expected_result, 'Test_Node::find_by_query($this->db->select(\'*\')->from(\'test_node\')->like(\'code\', \'snow\')); should give you Jon Snow');
     }
 
 }

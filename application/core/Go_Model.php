@@ -202,6 +202,7 @@ class Go_Model extends CI_Model
             'deleted_at' => $this->_deleted_at,
             'updated_at' => $this->_updated_at,
             'deleted_at' => $this->_deleted_at,
+            'deleted' => $this->deleted,
             'columns' => $this->_columns,
             'children' => $this->_children,
             'parents' => $this->_parents,

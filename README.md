@@ -43,6 +43,7 @@ Personally, I made this as core foundation of No-CMS 2.0
 * Extended routes (including option to disable autoroute)
 * Extended config
 * Better Unit Test Library 
+* ORM
 
 # Modified files
 
@@ -60,6 +61,7 @@ These are some files that was modified or added in GoIgniter:
 * `application/core/MY_Router.php`
 * `application/core/Go_Model.php`
 * `application/core/Unit_test.php`
+* `application/core/Twig`
 * `application/views/modules/`
 
 # The cool things
@@ -247,6 +249,109 @@ Three new constants are introduced in GoIgniter.
 
 You can change the values by editing `index.php`
 
+# ORM
+
+The ORM in GoIgniter is much simpler compared to Laravel's and much more powerful compared to CI 4.
+Here is a simple model:
+
+```php
+<?php // file location: modules/cms/models/Test_Node.php
+namespace Modules\Cms\Models;
+
+class Test_Node extends \Go_Model
+{
+    protected $_table = 'test_node';        // Table's name
+    protected $_id = 'id';                  // Primary key
+    protected $_created_at = 'created_at';  // field for creation date logging
+    protected $_updated_at = 'updated_at';  // field for update date logging
+    protected $_deleted_at = 'deleted_at';  // field for "soft deletion" logging
+    protected $_deleted = 'deleted';        // field for "soft deletion" flag
+    protected $_columns = ['code', 'parent_id', 'child_count']; // Other fields
+
+    protected $code = 'default'; // property that represent field's default value
+
+    protected $_children = array( // children of this table (i.e: one-to-many relation)
+        'children' => array(
+            'model' => 'Modules\Cms\Models\Test_Node',
+            'foreign_key' => 'parent_id',
+            'on_delete' => 'set_null', // restrict, cascade, set_null
+            'on_purge' => 'set_null', // restric, cascade, set_null
+        ),
+    );
+
+    protected $_parents = array( // parent of this table (i.e: many-to-one relation)
+        'parent' => array(
+            'model' => 'Modules\Cms\Models\Test_Node',
+            'foreign_key' => 'parent_id',
+        ),
+    );
+
+    protected function before_save(&$success, &$error_message) // what should we do before save
+    {
+        $this->child_count = count($this->children);
+    }
+}
+```
+
+And here is how to use it:
+
+```php
+<?php // file location: modules/cms/controllers/Test.php
+namespace Modules\Cms\Controllers;
+
+class Test extends CI_Controller
+{
+    public function index()
+    {
+       $array = array(
+            'code' => 'Ned Stark',
+            'children' => array(
+                array('code' => 'Robb Stark'),
+                array('code' => 'Jon Snow'),
+                array('code' => 'Sansa Stark'),
+                array('code' => 'Arya Stark'),
+                array('code' => 'Brandon Stark'),
+            ), 
+            'parent' => array('code' => 'Rickard Stark'),
+        );
+
+        // Creating a new test_node
+        $test_node = new Test_Node($array);
+
+        // save it
+        $test_node->save();
+
+        // test how many records available in the database
+        var_dump($this->db->count_all('test_node')); // should be 7
+
+        // delete Robb
+        $test_node->child[0]->delete();
+
+        // purge Robb (delete Robb forever)
+        $test_node->child[0]->purge();
+
+        // test how many records available in the database
+        var_dump($this->db->count_all('test_node')); // should be 6, Robb is gone
+
+        // Get Node by id
+        $rickard = Test_Node::find_by_id(1);
+        var_dump($rickard->code); // should be Rickard Stark
+        var_dump($rickard->child_count); // should be 1
+
+        // Get all node
+        $node_list = Test_Node::find_all();
+        var_dump(count($node_list)); // should be 6
+
+        // ORM is cool, but I want to try query
+        $node_list = Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
+        var_dump($node_list[0]->code); // And yeah, Jon Snow
+
+    }
+}
+```
+
+In my opinion, this is how ORM should be implemented. Or do you have any better idea?
+
 
 # Always loaded functions
 
@@ -268,8 +373,8 @@ These functions are always available, either in models, views, or controllers
 * CMS Module
 * Amigo (kind of Artisan in Laravel)
 * Unit testing (Failed)
-* CodeIgniter4 like Model & Entity
-* Multisite
+* CodeIgniter4 like Model & Entity (Failed, do another approach)
+* Multisite (done)
 * Laravel's like blade engine (No need, use twig instead)
 
 # The bad things
