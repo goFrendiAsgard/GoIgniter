@@ -527,10 +527,15 @@ class Test extends Test_Controller
 
 
         // test find_by_id
-        $rickard = Test_Node::find_by_id(1);
+        $ned = Test_Node::find_by_id(2);
+        $expected_result = 'Ned Stark';
+        $test = $ned->code;
+        $this->unit->run($test, $expected_result, '$ned = Test_Node::find_by_id(2); should give you Ned Stark');
+
         $expected_result = 'Rickard Stark';
-        $test = $rickard->code;
-        $this->unit->run($test, $expected_result, 'Test_Node::find_by_id(1); should give you Rickard Stark');
+        $test = $ned->parent->code;
+        $this->unit->run($test, $expected_result, '$ned->parent->code; should give you Rickard Stark');
+
 
         // test find_all
         $node_list = Test_Node::find_all();
