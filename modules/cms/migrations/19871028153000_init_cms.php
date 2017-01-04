@@ -1,19 +1,14 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Migration_Init_cms extends CI_Migration {
+class Migration_Init_cms extends Go_Migration {
 
     public function up()
     {
         ////////////////////////////////////////////////////////////
         // Create test_node
         ////////////////////////////////////////////////////////////
+        $this->add_default_fields();
         $this->dbforge->add_field(array(
-            'id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'auto_increment' => TRUE
-            ),
             'code' => array(
                 'type' => 'VARCHAR',
                 'constraint' => 255,
@@ -30,74 +25,39 @@ class Migration_Init_cms extends CI_Migration {
                 'unsigned' => TRUE,
                 'null' => TRUE,
             ),
-            'deleted' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-            ),
-            'created_at' => array(
-                'type' => 'DATETIME',
-                'null' => TRUE,
-            ),
-            'updated_at' => array(
-                'type' => 'DATETIME',
-                'null' => TRUE,
-            ),
-            'deleted_at' => array(
-                'type' => 'DATETIME',
-                'null' => TRUE,
-            ),
+
         ));
-        $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('test_node');
 
         ////////////////////////////////////////////////////////////
         // Create module
         ////////////////////////////////////////////////////////////
+        $this->add_default_fields();
         $this->dbforge->add_field(array(
-            'id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'auto_increment' => TRUE
-            ),
             'code' => array(
                 'type' => 'VARCHAR',
                 'constraint' => 255,
             ),
         ));
-        $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('cms_module');
 
         ////////////////////////////////////////////////////////////
         // Create site
         ////////////////////////////////////////////////////////////
+        $this->add_default_fields();
         $this->dbforge->add_field(array(
-            'id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'auto_increment' => TRUE
-            ),
             'code' => array(
                 'type' => 'VARCHAR',
                 'constraint' => 255,
             ),
         ));
-        $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('cms_site');
 
         ////////////////////////////////////////////////////////////
         // Create site_alias
         ////////////////////////////////////////////////////////////
+        $this->add_default_fields();
         $this->dbforge->add_field(array(
-            'id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'auto_increment' => TRUE
-            ),
             'site_id' => array(
                 'type' => 'INT',
                 'constraint' => 20,
@@ -108,43 +68,31 @@ class Migration_Init_cms extends CI_Migration {
                 'constraint' => 255,
             ),
         ));
-        $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('cms_site_alias');
 
         ////////////////////////////////////////////////////////////
         // Create site_module
         ////////////////////////////////////////////////////////////
+        $this->add_default_fields();
         $this->dbforge->add_field(array(
-            'id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'auto_increment' => TRUE
-            ),
             'site_id' => array(
                 'type' => 'INT',
                 'constraint' => 20,
                 'unsigned' => TRUE,
             ),
-            'site_id' => array(
+            'module_id' => array(
                 'type' => 'INT',
                 'constraint' => 20,
                 'unsigned' => TRUE,
             ),
         ));
-        $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('cms_site_module');
 
         ////////////////////////////////////////////////////////////
         // Create config
         ////////////////////////////////////////////////////////////
+        $this->add_default_fields();
         $this->dbforge->add_field(array(
-            'id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'auto_increment' => TRUE
-            ),
             'site_id' => array(
                 'type' => 'INT',
                 'constraint' => 20,
@@ -170,19 +118,13 @@ class Migration_Init_cms extends CI_Migration {
                 'constraint' => 255,
             ),
         ));
-        $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('cms_config');
 
         ////////////////////////////////////////////////////////////
         // Create group
         ////////////////////////////////////////////////////////////
+        $this->add_default_fields();
         $this->dbforge->add_field(array(
-            'id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'auto_increment' => TRUE
-            ),
             'site_id' => array(
                 'type' => 'INT',
                 'constraint' => 20,
@@ -200,19 +142,13 @@ class Migration_Init_cms extends CI_Migration {
                 'constraint' => 255,
             ),
         ));
-        $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('cms_group');
 
         ////////////////////////////////////////////////////////////
         // Create user
         ////////////////////////////////////////////////////////////
+        $this->add_default_fields();
         $this->dbforge->add_field(array(
-            'id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'auto_increment' => TRUE
-            ),
             'site_id' => array(
                 'type' => 'INT',
                 'constraint' => 20,
@@ -234,7 +170,6 @@ class Migration_Init_cms extends CI_Migration {
                 'null' => TRUE,
             ),
         ));
-        $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('cms_user');
 
     }
