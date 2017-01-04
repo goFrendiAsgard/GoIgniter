@@ -59,6 +59,7 @@
         <span class="failed">{{ failed }} failed.</span>
     </div>
 
+    <h3>Tests</h3>
     <table class="result-table">
         {% set header = '<tr>
             <th>Test Name</th>
@@ -83,6 +84,22 @@
             </tr>
         {% endfor %}
     </table>
+
+    {% if queries | length > 0 %}
+        <h3>Queries ({{ total_queries }}), executed in {{ total_query_time }}</h3>
+        <table class="result-table">
+            <tr>
+                <th>Execution Time</th>
+                <th>SQL</th>
+            </tr>
+            {% for query in queries %}
+                <tr>
+                    <td>{{ query.time }}</td>
+                    <td>{{ query.sql | nl2br }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
 
 </body>
 </html>

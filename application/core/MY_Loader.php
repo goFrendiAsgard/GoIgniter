@@ -51,7 +51,7 @@ class MY_Loader extends CI_Loader
         return $original_config;
     }
 
-    public function database($params = '', $return = FALSE, $query_builder = NULL)
+    public function database($params = '', $return = FALSE, $param_query_builder = NULL)
     {
         if($params === '')
         {
@@ -67,7 +67,7 @@ class MY_Loader extends CI_Loader
             // initiate default variables
             $active_group = 'default';
             $db = array($active_group => '');
-            $query_builder = TRUE;
+            //$query_builder = TRUE;
             include($file_path);
 
             // include extconfig
@@ -92,7 +92,7 @@ class MY_Loader extends CI_Loader
             // set params
             $params = $db[$active_group];
         }
-        return parent::database($params, $return, $query_builder);
+        return parent::database($params, $return, $param_query_builder);
     }
 
     public function library($library, $params = NULL, $object_name = NULL)

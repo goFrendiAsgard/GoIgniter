@@ -1,12 +1,69 @@
 <?php
 namespace Modules\Cms\Controllers;
 
+///////////////////////////////////////////////////////////////////////////
+//
+//  Imports
+//
+///////////////////////////////////////////////////////////////////////////
+
 use \Module_Migrator;
 use \Site;
 use \Modules\Cms\Test_Controller;
 use \Modules\Cms\Mutator;
 use \Modules\Cms\Models\Genesis;
-use \Modules\Cms\Models\Test_Node;
+
+///////////////////////////////////////////////////////////////////////////
+//
+//  Classes
+//
+///////////////////////////////////////////////////////////////////////////
+
+class Test_Node extends \Go_Model
+{
+}
+
+class Full_Test_Node extends \Go_Model
+{
+    protected $_table = 'test_node';
+    protected $_id = 'id';
+    protected $_created_at = 'created_at';
+    protected $_updated_at = 'updated_at';
+    protected $_deleted_at = 'deleted_at';
+    protected $_deleted = 'deleted';
+    protected $_columns = ['code', 'parent_id', 'child_count'];
+
+    protected $code = 'default';
+
+    protected $_children = array(
+        'children' => array(
+            'model' => 'Modules\Cms\Controllers\Full_Test_Node',
+            'foreign_key' => 'parent_id',
+            'on_delete' => 'set_null', // restrict, cascade, set_null
+            'on_purge' => 'set_null', // restric, cascade, set_null
+        ),
+    );
+
+    protected $_parents = array(
+        'parent' => array(
+            'model' => 'Modules\Cms\Controllers\Full_Test_Node',
+            'foreign_key' => 'parent_id',
+        ),
+    );
+
+    protected function before_save(&$success, &$error_message)
+    {
+        $this->child_count = count($this->children);
+    }
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////
+//
+//  Tester
+//
+///////////////////////////////////////////////////////////////////////////
 
 class Test extends Test_Controller 
 {
@@ -404,7 +461,7 @@ class Test extends Test_Controller
         $this->unit->run($test, $expected_result, 'Run Routed Module URL: nyan/nyan?a=gude&b=tama');
     }
 
-    function test_orm()
+    function test_full_orm()
     {
         $array = array(
             'code' => 'Ned Stark',
@@ -420,13 +477,13 @@ class Test extends Test_Controller
 
         // Try to create test_node with hybrid parameters (array & object)
         $obj = $array;
-        $obj['children'][0] = new Test_Node($obj['children'][0]);
-        $test_node = new Test_Node($obj);
+        $obj['children'][0] = new Full_Test_Node($obj['children'][0]);
+        $test_node = new Full_Test_Node($obj);
 
         // test this test_node
         $expected_result = 'Ned Stark';
         $test = $test_node->code;
-        $this->unit->run($test, $expected_result, 'Do $test_node = new Test_Node($obj); At this point, $test_node\'s code should be Ned Stark');
+        $this->unit->run($test, $expected_result, 'Do $test_node = new Full_Test_Node($obj); At this point, $test_node\'s code should be Ned Stark');
 
         $expected_result = 'Robb Stark';
         $test = $test_node->parent->children[0]->children[0]->code;
@@ -525,39 +582,54 @@ class Test extends Test_Controller
         $test = $this->db->count_all('test_node');
         $this->unit->run($test, $expected_result, 'node Robb _purged, only 6 record available in the table now');
 
-
         // test find_by_id
-        $ned = Test_Node::find_by_id(2);
+        $ned = Full_Test_Node::find_by_id(2);
         $expected_result = 'Ned Stark';
         $test = $ned->code;
-        $this->unit->run($test, $expected_result, '$ned = Test_Node::find_by_id(2); should give you Ned Stark');
+        $this->unit->run($test, $expected_result, '$ned = Full_Test_Node::find_by_id(2); should give you Ned Stark');
 
+        // get parent
         $expected_result = 'Rickard Stark';
         $test = $ned->parent->code;
         $this->unit->run($test, $expected_result, '$ned->parent->code; should give you Rickard Stark');
 
+        // get parent
+        $expected_result = 4;
+        $test = count($ned->children);
+        $this->unit->run($test, $expected_result, 'count($ned->children); should give you 4');
 
         // test find_all
-        $node_list = Test_Node::find_all();
+        $node_list = Full_Test_Node::find_all();
         $expected_result = 6;
         $test = count($node_list);
-        $this->unit->run($test, $expected_result, 'Test_Node::find_all(); should give you 6 records');
+        $this->unit->run($test, $expected_result, 'Full_Test_Node::find_all(); should give you 6 records');
 
         // ORM is cool, but I want to try query
-        $node_list = Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
+        $node_list = Full_Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
         $expected_result = 'Jon Snow';
         $test = $node_list[0]->code;
-        $this->unit->run($test, $expected_result, 'Test_Node::find_by_query($this->db->select(\'*\')->from(\'test_node\')->like(\'code\', \'snow\')); should give you Jon Snow');
+        $this->unit->run($test, $expected_result, 'Full_Test_Node::find_by_query($this->db->select(\'*\')->from(\'test_node\')->like(\'code\', \'snow\')); should give you Jon Snow');
 
-        $node_list = Test_Node::find_by_query($this->db->query("SELECT * FROM go_test_node WHERE code LIKE '%snow%'"));
+        $node_list = Full_Test_Node::find_by_query($this->db->query("SELECT * FROM go_test_node WHERE code LIKE '%snow%'"));
         $expected_result = 'Jon Snow';
         $test = $node_list[0]->code;
-        $this->unit->run($test, $expected_result, 'Test_Node::find_by_query($this->db->query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'"))');
+        $this->unit->run($test, $expected_result, 'Full_Test_Node::find_by_query($this->db->query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'"))');
         
-        $node_list = Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE '%snow%'");
+        $node_list = Full_Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE '%snow%'");
         $expected_result = 'Jon Snow';
         $test = $node_list[0]->code;
-        $this->unit->run($test, $expected_result, 'Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'")');
+        $this->unit->run($test, $expected_result, 'Full_Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'")');
+    }
+
+    function test_minimal_orm()
+    {
+        $CI =& get_instance();
+        $db =& $CI->db;
+        $test_node = Test_Node::find_by_id(1);
+
+        $expected_result = 'Rickard Stark';
+        $test = $test_node->code;
+        $this->unit->run($test, $expected_result, 'Test_Node::find_by_id(1) should give Rickard Stark');
     }
 
 }

@@ -352,7 +352,12 @@ if ( ! is_php('5.4'))
  *
  */
 	// Load the base controller class
-	require_once BASEPATH.'core/Controller.php';
+    
+    // Removed by Go Frendi
+    // require_once BASEPATH.'core/Controller.php';
+
+    // Add by Go Frendi. Because the default CI_Controller will always override self::$instance
+    require_once(APPPATH.'core/CI_Controller.php');
 
 	/**
 	 * Reference to the CI_Controller method.

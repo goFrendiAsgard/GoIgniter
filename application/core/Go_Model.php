@@ -44,7 +44,6 @@ class Go_Model extends CI_Model
     ////////////////////////////////////////////////////////////////
 
     protected $_allowed_columns = array();
-    protected $_db = NULL;
     public $_values = array();
 
     protected function _set_allowed_columns()
@@ -98,7 +97,7 @@ class Go_Model extends CI_Model
             $data = (array) $data;
         }
 
-        return new $class($data, $this->_db);
+        return new $class($data, $this->db);
     }
 
     public function __get($key)
@@ -107,6 +106,7 @@ class Go_Model extends CI_Model
         {
             if(array_key_exists($key, $this->_parents))
             {
+                // Lazy loading parent in case of foreign key defined
                 if(!array_key_exists($key, $this->_values) || $this->_values[$key] == NULL)
                 {
                     // get parent's config
@@ -125,8 +125,31 @@ class Go_Model extends CI_Model
                     }
                 }
             }
-            else if(array_key_exists($key, $this->_children))
+            else if(array_key_exists($key, $this->_children) && $this->_get_id() != NULL)
             {
+                // get child's config
+                $config = $this->_children[$key];
+                $class = $config['model'];
+                $foreign_key = $config['foreign_key'];
+
+                $child_config = $class::_get_static_config();
+                foreach($child_config['parents'] as $alias=>$child_config)
+                {
+                    // this is the correct child config
+                    if($child_config['model'] == get_called_class() && $child_config['foreign_key'] == $foreign_key)
+                    {
+                        // get child list
+                        $real_child_list = $class::find_where($foreign_key, $this->_get_id());
+                        foreach($real_child_list as &$real_child)
+                        {
+                            if(!in_array($real_child, $this->_values[$key]))
+                            {
+                                $real_child->_set_parent($alias, $this);
+                            }
+                        }
+                        break;
+                    }
+                }
             }
 
             // get from _values
@@ -150,14 +173,20 @@ class Go_Model extends CI_Model
         // create parent if not exist, or just simply return this val
         $parent = $this->_data_to_entity($val, $class_name);
 
+        if($class_name == get_called_class() && ($this->_get_id() == $parent->_get_id() && $this->_get_id() != NULL))
+        {
+            // no, you cannot set this record as the parent of itself
+            return FALSE;
+        }
+
         // look for parent's children configuration refering to this model
-        $parent_config = $parent->_get_config(); 
+        $parent_config = $parent->_get_config();
         foreach($parent_config['children'] as $alias => $config)
         {
             // if it is the correct configuration, add this model as parent's child
             if($config['model'] == $class_name && $config['foreign_key'] == $foreign_key)
             {
-                $parent_children = $parent->__get($alias);
+                $parent_children = $parent->_values[$alias];
                 // if is exists don't need to do anything. This is also the recursive breaker
                 if(!in_array($this, $parent_children))
                 {
@@ -253,11 +282,23 @@ class Go_Model extends CI_Model
         // automatically set _table if not exists
         if(empty($this->_table))
         {
-            $this->_table = get_called_class();
+            $class = trim(get_called_class(), '\\');
+            $class_parts = explode('\\', $class);
+            $table = $class_parts[count($class_parts)-1];
+
+            // try to use class name
+            if($this->db->table_exists($table))
+            {
+                $this->_table = $table;
+            }
+            else if($this->db->table_exists(strtolower($table)))
+            {
+                $this->_table = strtolower($table);
+            }
         }
 
         // check the actual field on the database
-        if(!$this->_db->table_exists($this->_table))
+        if(!$this->db->table_exists($this->_table))
         {
             show_error('Table '.$this->_table.' is not exists');
         }
@@ -265,7 +306,7 @@ class Go_Model extends CI_Model
         if(count($this->_columns) == 0  || !empty($this->_id) || !empty($this->_deleted) || !empty($this->_created_at) || !empty($this->_updated_at) || !empty($this->_deleted_at) || count($this->_parent) > 0)
         {
             // get field list
-            $field_list = $this->_db->list_fields($this->_table);
+            $field_list = $this->db->list_fields($this->_table);
 
             // add normal fields in field_list into $this->_columns.
             if(count($this->_columns) == 0)
@@ -284,18 +325,18 @@ class Go_Model extends CI_Model
             if(!empty($this->_id) && !in_array($this->_id, $field_list))
             {
                 $field_data_list = $this->db->field_data($this->_table);
-                $new_id_set = FALSE;
+                $new_id_is_set = FALSE;
                 foreach ($field_data_list as $field_data)
                 {
                     if($field_data->primary_key)
                     {
                         $this->_id = $field_data->name;
-                        $new_id_set = TRUE;
+                        $new_id_is_set = TRUE;
                         break;
                     }
                 }
 
-                if(!$new_id_set)
+                if(!$new_id_is_set)
                 {
                     show_error('Field '.$this->_id.' not found in '.$this->_table);
                 }
@@ -357,28 +398,21 @@ class Go_Model extends CI_Model
 
     }
 
-    public function __construct($obj=array(), &$db = NULL)
+    public function __construct($obj=array(), $db = NULL)
     {
+        parent::__construct();
         // database
-        $this->_set_allowed_columns();
         if($db != NULL)
         {
-            $this->_db = $db;
+            $this->db = $db;
         }
         else
         {
             $this->load->database();
-            $this->_db = $this->db;
-            $db = $this->db;
         }
 
         $this->_sanitize_properties();
-
-        // create properties
-        foreach($obj as $key=>$val)
-        {
-            $this->__set($key, $val);
-        }
+        $this->_set_allowed_columns();
 
         // on creation, children should be empty array if not defined
         foreach(array_keys($this->_children) as $key)
@@ -388,6 +422,13 @@ class Go_Model extends CI_Model
                 $this->_values[$key] = array();
             }
         }
+
+        // assign properties
+        foreach($obj as $key=>$val)
+        {
+            $this->__set($key, $val);
+        }
+        
     }
 
     // return array representation of $this->_values
@@ -442,13 +483,13 @@ class Go_Model extends CI_Model
         $pk = $this->_get_id();
 
         // start transaction
-        $this->_db->trans_start();
+        $this->db->trans_start();
 
         // is this old_record?
         $is_old_record = $pk != NULL;
         if(!$is_old_record)
         {
-            $record_count = $this->_db->select('*')
+            $record_count = $this->db->select('*')
                 ->from($table)
                 ->where($pk_field, $pk)->get()
                 ->num_rows();
@@ -480,7 +521,7 @@ class Go_Model extends CI_Model
                         if($parent == NULL){ continue; }
 
                         // get foreign key and save
-                        $parent->_do_save($success, $error_message, FALSE, TRUE);
+                        $parent->_do_save($success, $error_message, FALSE);
                         if(!$success)
                         {
                             break;
@@ -512,7 +553,7 @@ class Go_Model extends CI_Model
                             $simple_array[$this->_deleted] = FALSE;
                             $this->__set($this->_deleted, FALSE);
                         }
-                        $this->_db->update($table, $simple_array, array($pk_field=>$pk));
+                        $this->db->update($table, $simple_array, array($pk_field=>$pk));
                     }
                     else
                     {
@@ -528,8 +569,8 @@ class Go_Model extends CI_Model
                             $this->__set($this->_deleted, FALSE);
                         }
                         // insert
-                        $this->_db->insert($table, $simple_array);
-                        $pk = $this->_db->insert_id();
+                        $this->db->insert($table, $simple_array);
+                        $pk = $this->db->insert_id();
                         $this->__set($pk_field, $pk);
                     }
 
@@ -574,7 +615,7 @@ class Go_Model extends CI_Model
                             // stop transaction
                             if($success)
                             {
-                                $this->_db->trans_complete();
+                                $this->db->trans_complete();
                             }
                         }
                     }
@@ -587,7 +628,7 @@ class Go_Model extends CI_Model
         // be changed 
         if(!$success)
         {
-            $this->_db->trans_rollback();
+            $this->db->trans_rollback();
         }
 
         return array('success' => $success, 'error_message' => $error_message);
@@ -620,7 +661,7 @@ class Go_Model extends CI_Model
         $timestamp = date('Y-m-d H:i:s');
 
         // start transaction
-        $this->_db->trans_start();
+        $this->db->trans_start();
 
         // before delete
         $this->before_delete($success, $error_message);
@@ -640,7 +681,7 @@ class Go_Model extends CI_Model
                 $simple_array[$this->_deleted] = TRUE;
                 $this->__set($this->_deleted, TRUE);
             }
-            $this->_db->update($table, $simple_array, array($pk_field=>$pk));
+            $this->db->update($table, $simple_array, array($pk_field=>$pk));
 
             // update foreign keys of children
             if($propagate)
@@ -698,7 +739,7 @@ class Go_Model extends CI_Model
                 if($success)
                 {
                     // stop transaction
-                    $this->_db->trans_complete();
+                    $this->db->trans_complete();
                 }
             }
         }
@@ -708,7 +749,7 @@ class Go_Model extends CI_Model
         // be changed 
         if(!$success)
         {
-            $this->_db->trans_rollback();
+            $this->db->trans_rollback();
         }
 
         return array('success' => $success, 'error_message' => $error_message);
@@ -735,7 +776,7 @@ class Go_Model extends CI_Model
         $timestamp = date('Y-m-d H:i:s');
 
         // start transaction
-        $this->_db->trans_start();
+        $this->db->trans_start();
 
         // before purge
         $this->before_purge($success, $error_message);
@@ -744,7 +785,7 @@ class Go_Model extends CI_Model
             // get data
             $simple_array = $this->as_array(TRUE);
 
-            $this->_db->delete($table, array($pk_field=>$pk));
+            $this->db->delete($table, array($pk_field=>$pk));
 
             // update foreign keys of children
             if($propagate)
@@ -802,7 +843,7 @@ class Go_Model extends CI_Model
                 if($success)
                 {
                     // stop transaction
-                    $this->_db->trans_complete();
+                    $this->db->trans_complete();
                 }
             }
         }
@@ -812,7 +853,7 @@ class Go_Model extends CI_Model
         // be changed 
         if(!$success)
         {
-            $this->_db->trans_rollback();
+            $this->db->trans_rollback();
         }
 
         return array('success' => $success, 'error_message' => $error_message);
@@ -844,13 +885,11 @@ class Go_Model extends CI_Model
         }
         else
         {
-            $db = NULL;
-            $instance = new $class(array(), $db);
+            $instance = new $class(array());
             $config = $instance->_get_config();
             unset($instance);
 
             $config['class'] = $class;
-            $config['default_db'] = $db;
             self::$_configs[$class] = $config;
         }
 
@@ -865,7 +904,8 @@ class Go_Model extends CI_Model
         $class = $config['class'];
         if($db == NULL)
         {
-            $db = $config['default_db'];
+            $CI =& get_instance();
+            $db =& $CI->db;
         }
         $table = $config['table'];
         $id_field = $config['id'];
@@ -891,7 +931,8 @@ class Go_Model extends CI_Model
         $class = $config['class'];
         if($db == NULL)
         {
-            $db = $config['default_db'];
+            $CI =& get_instance();
+            $db =& $CI->db;
         }
         $table = $config['table'];
         $id_field = $config['id'];
@@ -910,14 +951,15 @@ class Go_Model extends CI_Model
         return $result;
     }
 
-    public static function find_where($key, $value = NULL, $escape = NULL, $db = NULL)
+    public static function find_where($key, $value = NULL, $escape = NULL, $limit=1000, $offset=0, $db = NULL)
     {
         // init db and get config
         $config = static::_get_static_config();
         $class = $config['class'];
         if($db == NULL)
         {
-            $db = $config['default_db'];
+            $CI =& get_instance();
+            $db =& $CI->db;
         }
         $table = $config['table'];
         $id_field = $config['id'];
@@ -925,6 +967,7 @@ class Go_Model extends CI_Model
         // prepare query
         $query = $db->select('*')
             ->from($table)
+            ->where($key, $value, $escape)
             ->limit($limit, $offset);
 
         $result = static::find_by_query($query);
@@ -936,11 +979,12 @@ class Go_Model extends CI_Model
         // get class name 
         $config = static::_get_static_config();
         $class = $config['class'];
-        
+        $CI =& get_instance();
+        $db =& $CI->db;
+
         // execute query
         if(is_string($query))
         {
-            $db = $config['default_db'];
             $query = $db->query($query);
         }
         else if(method_exists($query, 'get'))

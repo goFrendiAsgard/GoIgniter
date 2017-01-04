@@ -54,6 +54,7 @@ These are some files that was modified or added in GoIgniter:
 * `index.php` (This file is different from CodeIgniter's, please make sure to not overwrite this when you update CodeIgniter)
 * `application/core/config/`
 * `application/core/go_init.php`
+* `application/core/CI_Controller.php`
 * `application/core/Module_Migrator.php`
 * `application/core/MY_CodeIgniter.php`
 * `application/core/MY_Config.php`
@@ -260,12 +261,13 @@ namespace Modules\Cms\Models;
 
 class Test_Node extends \Go_Model
 {
-    // $_table will be automatically determined by using class name
-    protected $_columns = ['code']; // The columns we have 
 }
 ```
 
-But let's make a full featured one for now:
+While you make a Model like this, GoIgniter will try to guess table name based on class name.
+It will also try to fill out other configuration automatically.
+
+But let's make a full featured model for now:
 
 ```php
 <?php // file location: modules/cms/models/Test_Node.php
@@ -366,7 +368,7 @@ class Test extends CI_Controller
 }
 ```
 
-In my opinion, this is how ORM should be implemented. Or do you have any better idea?
+In my opinion, this is how ORM should be implemented. No hasMany, belongsTo, and whatever hard-to-memorize keywords.
 
 
 # Always loaded functions
@@ -398,3 +400,5 @@ These functions are always available, either in models, views, or controllers
 * I made `application\views\modules\` to cache the original view. Whenever original view updated, and someone access the url, the cache will be updated. This is good, and I also check modification time of the file, so there is no unnecessary `write-to-disk` operation. But it surely add several micro seconds to response time. The same mechanism also works for asset (static file) management.
 
 * There might be some 'reinventing-the-wheel' thing here.
+
+* In ORM, you cannot set a record as a child of itself.

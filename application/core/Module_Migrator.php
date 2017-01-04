@@ -10,6 +10,8 @@ class Module_Migrator extends CI_Model
         // get the pre-processed configuration
         $this->migration_config = $this->load->get_library_config('migration');
         $this->migration_error = array();
+
+        $CI =& get_instance();
         $this->load->database();
         $this->load->dbforge();
     }

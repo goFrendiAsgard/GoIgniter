@@ -31,7 +31,11 @@ spl_autoload_register(function ($class)
         // CI
         if(substr($class, 0, 3) == 'CI_')
         {
-            $file_name = BASEPATH . 'core/' . substr($class,3) . '.php';
+            $file_name = APPPATH . 'core/' . $class . '.php';
+            if(!file_exists($file_name) || !is_file($file_name) || !is_readable($file_name))
+            {
+                $file_name = BASEPATH . 'core/' . substr($class,3) . '.php';
+            }
         }
         // Twig
         else if(substr($class, 0, 5) == 'Twig_')
@@ -382,9 +386,25 @@ if(!function_exists('run_module_controller'))
                     $full_class = $namespace . '\\'.$test_class;
                     if(method_exists($full_class, $test_function)){
                         ob_start();
+
+                        $CI =& get_instance(); // backup $CI
+
+                        // init the controller class, run the method, and get the result
                         $obj = new $full_class();
                         call_user_func_array(array($obj, $test_function), $test_parameters);
                         $result = ob_get_contents();
+
+                        // get current instance
+                        $TMP =& get_instance();
+                        if(isset($TMP->db))
+                        {
+                            $CI->db->queries = array_merge($CI->db->queries, $TMP->db->queries);
+                            $CI->db->query_times = array_merge($CI->db->query_times, $TMP->db->query_times);
+                        }
+
+                        // put the original $CI back
+                        CI_Controller::set_instance($CI);
+
                         @ob_end_clean();
                         $found = TRUE;
                         break;

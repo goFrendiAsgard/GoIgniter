@@ -56,6 +56,7 @@ class Test_Controller extends \CI_Controller
 
     public function index()
     {
+
         $this->global_setup_and_tearDown();
         $this->global_setup();
         $separator = array();
@@ -117,14 +118,34 @@ class Test_Controller extends \CI_Controller
             }
         }
 
+        // get db queries and query times
+        $queries = array();
+        $total_queries = 0;
+        $total_query_time = 0;
+        if(isset($this->db))
+        {
+            for($i=0; $i<count($this->db->queries); $i++)
+            {
+                $queries[] = array(
+                    'sql' => $this->db->queries[$i],
+                    'time' => $this->db->query_times[$i]
+                );
+                $total_queries ++;
+                $total_query_time += $this->db->query_times[$i];
+            }
+        }
+
         // send to view
         $data = array(
             'result' => $result,
             'total' => $result_count,
             'passed' => $passed_count,
             'failed' => $failed_count,
+            'queries' => $queries,
+            'total_queries' => $total_queries,
+            'total_query_time' => $total_query_time,
         );
-        $this->output->enable_profiler();
+
         view('cms/test_controller_index', $data);
     }
 
