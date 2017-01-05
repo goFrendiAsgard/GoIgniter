@@ -1,7 +1,25 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
+// Autoload composer since it doesn't make sense to have composer and not autoload :)
+$composer_autoload_names = array(APPPATH.'vendor/autoload.php', FCPATH.'vendor/autoload.php');
+foreach($composer_autoload_names as $file_name)
+{
+    if(file_exists($file_name) && is_file($file_name) && is_readable($file_name))
+    {
+        require_once($file_name);
+        break;
+    }
+}
+
+// The default autoload, will honor composer autoload if it was loaded 
 spl_autoload_register(function ($class)
 {
+    // Probably composer is used. So if class is already declared, let it be, don't do anything else
+    if(class_exists($class))
+    {
+        return FALSE;
+    }
+
     $class_parts = explode('\\', trim($class, '\\'));
 
     $file_name = NULL;
@@ -37,11 +55,11 @@ spl_autoload_register(function ($class)
                 $file_name = BASEPATH . 'core/' . substr($class,3) . '.php';
             }
         }
-        // Twig
+        // Twig, note that this is a fallback scenario if composer autoload not found
         else if(substr($class, 0, 5) == 'Twig_')
         {
             $file_name = substr($class, 5);
-            $file_name = TWIGPATH . str_replace(array('_', '\0'), array(DIRECTORY_SEPARATOR, ''), $file_name) . '.php';
+            $file_name = APPPATH . 'core/Twig/' . str_replace(array('_', '\0'), array(DIRECTORY_SEPARATOR, ''), $file_name) . '.php';
         }
         // Core classes
         else

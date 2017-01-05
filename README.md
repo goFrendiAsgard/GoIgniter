@@ -26,23 +26,37 @@ Personally, I made this as core foundation of No-CMS 2.0
 
 # Minimum requirement
 
-* PHP 5.3, since I use `anonymous function`
+* PHP 5.4, since I use `anonymous function`
 
 # How to start
 
 * If you use xampp, put this on `C:\xampp\htdocs`, open your browser, and type this url: `http://localhost/GoIgniter`
 * If you want to use php's default server, type `php amigo serve` in your terminal, open your browser, and type this url: `http://localhost:8080`
+* If you have composer, please run `composer install` to get the newest packages (especiall twig) instead of using old fallback packages.
+
+# IMPORTANT NOTICE
+
+If you use GoIgniter in production, please create `application/core/config/config.php` and set `$config['hostname']` to your `hostname`. e.g:
+
+```php
+<?php
+$config['hostname'] = 'somedomain.com';
+// or $config['hostname'] = 'localhost';
+```
+
+This is important to avoid `host header injection` attacks. 
 
 # Feature
 
 * HMVC with namespace
-* run_module_controller() which is better than HMVC's `Modules::run`
+* `run_module_controller()` which is better than HMVC's `Modules::run`
 * static file management with `asset_url()`
 * The way of initiating helper, model, or library is very similar to CodeIgniter4
 * Still compatible with PHP 5.4 (Contrast to CodeIgniter4 that will only support PHP7)
 * Extended routes (including option to disable autoroute)
 * Extended config
 * Better Unit Test Library 
+* Using twig, but the old `<?php ?>` tag is still allowed in the view
 * ORM
 
 # Modified files
@@ -62,7 +76,7 @@ These are some files that was modified or added in GoIgniter:
 * `application/core/MY_Router.php`
 * `application/core/Go_Model.php`
 * `application/core/Unit_test.php`
-* `application/core/Twig`
+* `application/core/Twig` (This is just for fallback scenario, install composer and GoIgniter will use composer's twig)
 * `application/views/modules/`
 
 # The cool things
@@ -384,7 +398,7 @@ These functions are always available, either in models, views, or controllers
 * `view($view, $data = array(), $return = FALSE)`
 * `run_module_controller($url, $return = FALSE)`
 * `run_routed_module($url, $return = FALSE)`
-* `cache_modules()
+* `cache_modules()`
 
 # Soon to be added
 

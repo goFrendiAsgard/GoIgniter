@@ -17,12 +17,57 @@ class MY_Config extends CI_Config{
 		$this->config =& get_config($config);
 
 		// Set the base_url automatically if none was provided
-		if (empty($this->config['base_url']))
+
+
+        // Added by GoFrendi, honor site code determination first 
+        // This is necessary to avoid host header injection attack
+        if(isset($this->config['hostname']))
+        {
+            require_once(__DIR__.'/Site.php');
+            $site = new Site();
+
+            if($site->get_current_code() == NULL && $site->is_main_site())
+            {
+                // this is main site, use hostname !!!
+                $server_addr = $this->config['hostname'];
+            }
+            else if($site->get_current_code() != NULL)
+            {
+                if($site->get_current_code() == $site->get_code_by_alias($_SERVER['SERVER_NAME']))
+                {
+                    // this is not main site, but it is using alias
+                    $server_addr = $_SERVER['SERVER_NAME'];
+                }
+                else
+                {
+                    // this is not main site and it is not using alias
+                    $server_addr = $site->get_current_code().'.'.$this->config['hostname'];
+                }
+            }
+            else
+            {
+                // this is not main site, but current code is null?
+                // this must be 'host header injection' attempt. 
+                // silently use default hostname as address :)
+
+                $server_addr = $this->config['hostname'];
+            }
+
+            $base_url = (is_https() ? 'https' : 'http').'://'.$server_addr
+                .(isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] != '80'? ':'.$_SERVER['SERVER_PORT'] : '')
+                .substr($_SERVER['SCRIPT_NAME'], 0, strpos($_SERVER['SCRIPT_NAME'], basename($_SERVER['SCRIPT_FILENAME'])));
+			$this->set_item('base_url', $base_url);
+        }
+        else if (empty($this->config['base_url']))
 		{
             // Added by GoFrendi, use SERVER_NAME first if possible, before trying SERVER_ADDR
+            // When you fall to this "if", it is likely you prone to request header injection.
+            // Please set you $config['hostname'] correctly
+
             if (isset($_SERVER['SERVER_NAME']))
             {
                 $server_addr = $_SERVER['SERVER_NAME'];
+
                 $base_url = (is_https() ? 'https' : 'http').'://'.$server_addr
                     .(isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] != '80'? ':'.$_SERVER['SERVER_PORT'] : '')
 					.substr($_SERVER['SCRIPT_NAME'], 0, strpos($_SERVER['SCRIPT_NAME'], basename($_SERVER['SCRIPT_FILENAME'])));
