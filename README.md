@@ -354,10 +354,10 @@ class Test extends CI_Controller
         var_dump($this->db->count_all('test_node')); // should be 7
 
         // delete Robb
-        $test_node->child[0]->delete();
+        $test_node->children[0]->delete();
 
         // purge Robb (delete Robb forever)
-        $test_node->child[0]->purge();
+        $test_node->children[0]->purge();
 
         // test how many records available in the database
         var_dump($this->db->count_all('test_node')); // should be 6, Robb is gone

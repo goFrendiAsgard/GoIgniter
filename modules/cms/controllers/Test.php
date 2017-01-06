@@ -7,8 +7,9 @@ namespace Modules\Cms\Controllers;
 //
 ///////////////////////////////////////////////////////////////////////////
 
-use \Module_Migrator;
 use \Site;
+use \Go_Migration;
+use \Module_Migrator;
 use \Modules\Cms\Test_Controller;
 use \Modules\Cms\Mutator;
 use \Modules\Cms\Models\Genesis;
@@ -665,6 +666,12 @@ class Test extends Test_Controller
         $test = $test_node->code;
         $this->unit->run($test, $expected_result, 'Test_Node::find_by_id(1) should give Rickard Stark');
 
+    }
+
+    function test_go_migration_alias()
+    {
+        $go_migration = new Go_Migration();
+        var_dump($go_migration->type_varchar_255);
     }
 
 }

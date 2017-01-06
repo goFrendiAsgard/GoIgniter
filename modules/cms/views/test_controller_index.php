@@ -71,21 +71,27 @@
         <h3>Queries ({{ total_queries }}), executed in {{ total_query_time | round(4) }}</h3>
         <table class="result-table">
             <tr>
+                <th>No</th>
                 <th>Execution Time</th>
                 <th>SQL</th>
             </tr>
+            {% set i = 1 %}
             {% for query in queries %}
                 <tr>
+                    <td>{{ i }}</td>
                     <td>{{ query.time | round(4) }}</td>
                     <td>{{ query.sql | nl2br }}</td>
                 </tr>
+                {% set i= i+1 %}
             {% endfor %}
         </table>
     {% endif %}
 
     <h3>Tests</h3>
     <table class="result-table">
+        {% set i = 1 %}
         {% set header = '<tr>
+            <th>No</th>
             <th>Test Name</th>
             <th>Location</th>
             <th>Test</th>
@@ -95,22 +101,24 @@
         </tr>' %}
         {% for row in tests %}
             {% if row.header != '' %}
-                <tr><th class="separator" colspan="6">{{ row.header }}</th></tr>
+                <tr><th class="separator" colspan="7">{{ row.header }}</th></tr>
                 {{ header | raw }}
             {% endif %}
             <tr>
-            <td> {{ row.test_name }}</td>
-            <td><code>{{ row.file }} : {{ row.line }}</code></td>
-            <td><b>{{ row.test_datatype }}</b> <code>{{ row.test }}</code></td>
-            <td><b>{{ row.res_datatype }}</b> <code>{{ row.expected }}</code></td>
-            <td class="{{ row.result }}">
-                {% if row.result == 'failed' %}
-                    <a name="failed"></a>
-                {% endif %}
-                {{ row.result }}
-            </td>
-            <td>{{ row.notes|nl2br }}</td>
+                <td>{{ i }}
+                <td>{{ row.test_name }}</td>
+                <td><code>{{ row.file }} : {{ row.line }}</code></td>
+                <td><b>{{ row.test_datatype }}</b> <code>{{ row.test }}</code></td>
+                <td><b>{{ row.res_datatype }}</b> <code>{{ row.expected }}</code></td>
+                <td class="{{ row.result }}">
+                    {% if row.result == 'failed' %}
+                        <a name="failed"></a>
+                    {% endif %}
+                    {{ row.result }}
+                </td>
+                <td>{{ row.notes|nl2br }}</td>
             </tr>
+            {% set i = i+1 %}
         {% endfor %}
     </table>
 
