@@ -664,6 +664,7 @@ class Test extends Test_Controller
         $expected_result = 'Rickard Stark';
         $test = $test_node->code;
         $this->unit->run($test, $expected_result, 'Test_Node::find_by_id(1) should give Rickard Stark');
+
     }
 
 }

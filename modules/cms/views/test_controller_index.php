@@ -54,10 +54,34 @@
 </head>
 <body>
     <div class="summary">
-        {{ total }} test performed.
-        <span class="passed">{{ passed }} passed</span>,
-        <span class="failed">{{ failed }} failed.</span>
+        {{ total_tests }} test performed.
+        <span class="passed">{{ passed_tests }} passed</span>,
+        <span class="failed">
+            {% if failed_tests > 0 %}
+                <a class="failed" href="#failed">{{ failed_tests }} failed.</a>
+            {% else %}
+                {{ failed_tests }} failed.
+            {% endif %}
+        </span>
     </div>
+
+    <h3>Memory usage : {{ memory_usage }}, Total execution time : {{ elapsed_time }} seconds</h3>
+
+    {% if queries | length > 0 %}
+        <h3>Queries ({{ total_queries }}), executed in {{ total_query_time | round(4) }}</h3>
+        <table class="result-table">
+            <tr>
+                <th>Execution Time</th>
+                <th>SQL</th>
+            </tr>
+            {% for query in queries %}
+                <tr>
+                    <td>{{ query.time | round(4) }}</td>
+                    <td>{{ query.sql | nl2br }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
 
     <h3>Tests</h3>
     <table class="result-table">
@@ -69,7 +93,7 @@
             <th>Result</th>
             <th>Notes</th>
         </tr>' %}
-        {% for row in result %}
+        {% for row in tests %}
             {% if row.header != '' %}
                 <tr><th class="separator" colspan="6">{{ row.header }}</th></tr>
                 {{ header | raw }}
@@ -79,27 +103,16 @@
             <td><code>{{ row.file }} : {{ row.line }}</code></td>
             <td><b>{{ row.test_datatype }}</b> <code>{{ row.test }}</code></td>
             <td><b>{{ row.res_datatype }}</b> <code>{{ row.expected }}</code></td>
-            <td class="{{ row.result }}">{{ row.result }}</td>
+            <td class="{{ row.result }}">
+                {% if row.result == 'failed' %}
+                    <a name="failed"></a>
+                {% endif %}
+                {{ row.result }}
+            </td>
             <td>{{ row.notes|nl2br }}</td>
             </tr>
         {% endfor %}
     </table>
-
-    {% if queries | length > 0 %}
-        <h3>Queries ({{ total_queries }}), executed in {{ total_query_time }}</h3>
-        <table class="result-table">
-            <tr>
-                <th>Execution Time</th>
-                <th>SQL</th>
-            </tr>
-            {% for query in queries %}
-                <tr>
-                    <td>{{ query.time }}</td>
-                    <td>{{ query.sql | nl2br }}</td>
-                </tr>
-            {% endfor %}
-        </table>
-    {% endif %}
 
 </body>
 </html>

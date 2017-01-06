@@ -656,6 +656,7 @@ class Go_Model extends CI_Model
 
                 if($success)
                 {
+                    // real action (insert/update)
                     if($this->_modified && !$this->_is_deleted())
                     {
                         // turn to array
@@ -689,6 +690,7 @@ class Go_Model extends CI_Model
                                 $simple_array[$this->_deleted] = FALSE;
                                 $this->_values[$this->_deleted] = FALSE;
                             }
+
                             // insert
                             $this->db->insert($table, $simple_array);
                             $pk = $this->db->insert_id();
@@ -706,13 +708,14 @@ class Go_Model extends CI_Model
                         foreach($this->_children as $alias=>$child_config)
                         {
                             // if children was not loaded, don't load it, just skip
-                            if(!in_array($alias, $this->_fetched_children))
+                            if(!in_array($alias, $this->_fetched_children) && $is_old_record)
                             {
                                 //continue;
                             }
 
                             $fk = $child_config['foreign_key'];    
-                            $children = $this->__get($alias);
+                            // $children = $this->__get($alias);
+                            $children = $this->_values[$alias];
                             $new_children = array();
                             foreach($children as $child)
                             {
