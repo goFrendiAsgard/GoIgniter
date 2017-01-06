@@ -46,9 +46,9 @@ class Go_Model extends CI_Model
     protected $_allowed_columns = array();
     protected $_fetched_parents = array();
     protected $_fetched_children = array();
-    protected $_fetched_relations = array();
     public $_values = array();
     public $_modified = TRUE; // by default, _modified flag is true
+    public $_evaluated = FALSE; // only used in 'save' process, to mark whether this node is already evaluated or not
 
     protected function _set_allowed_columns()
     {
@@ -59,6 +59,7 @@ class Go_Model extends CI_Model
             $this->_updated_at, $this->_deleted_at, $this->_deleted);
         $default_columns = array_merge($default_columns, array_keys($this->_parents));
         $default_columns = array_merge($default_columns, array_keys($this->_children));
+
 
         // add default_column to columns
         foreach($default_columns as $default_column)
@@ -569,6 +570,7 @@ class Go_Model extends CI_Model
     }
 
     // save this record
+
     public function save()
     {
         $this->_do_save();
@@ -578,6 +580,14 @@ class Go_Model extends CI_Model
     // $propagate inform whether it is needed to update parent & children as well
     public function _do_save(&$success = TRUE, &$error_message = '', $propagate = TRUE)
     {
+        if($this->_evaluated)
+        {
+            return array('success' => FALSE, 'error_message' => 'Evaluation to this object has been performed');
+        }
+
+        // set evaluated flag to true. This way, if parents or children of this object try to propagate do save, it will be rejected
+        $this->_evaluated = TRUE;
+
         $timestamp = date('Y-m-d H:i:s');
 
         // get table, pk, and data
@@ -619,12 +629,18 @@ class Go_Model extends CI_Model
                 {
                     foreach($this->_parents as $alias=>$parent_config)
                     {
+                        // if parent was not loaded, don't load it, just skip
+                        if(!in_array($alias, $this->_fetched_parents))
+                        {
+                            //continue;
+                        }
+
                         // skip if parent is NULL
-                        $parent = $this->__get($alias);
+                        $parent =& $this->_values[$alias];
                         if($parent == NULL || $parent->_is_deleted()){ continue; }
 
                         // get foreign key and save
-                        $parent->_do_save($success, $error_message, FALSE);
+                        $parent->_do_save($success, $error_message);
                         if(!$success)
                         {
                             break;
@@ -633,14 +649,13 @@ class Go_Model extends CI_Model
                         // update foreign key and reference to this field
                         $fk = $parent_config['foreign_key'];    
                         $parent_pk = $parent->_get_id();
-                        $this->__set($fk, $parent_pk);
-                        $this->__set($alias, $parent);
+                        $this->_values[$fk] = $parent_pk;
+                        $this->_values[$alias] =& $parent;
                     }
                 }
 
                 if($success)
                 {
-                    // if nothing changed, don't do insert or update
                     if($this->_modified && !$this->_is_deleted())
                     {
                         // turn to array
@@ -652,12 +667,12 @@ class Go_Model extends CI_Model
                             if($this->_updated_at != '')
                             {
                                 $simple_array[$this->_updated_at] = $timestamp;
-                                $this->__set($this->_updated_at, $timestamp);
+                                $this->_values[$this->_updated_at] = $timestamp;
                             }
                             if($this->_deleted != '')
                             {
                                 $simple_array[$this->_deleted] = FALSE;
-                                $this->__set($this->_deleted, FALSE);
+                                $this->_values[$this->_deleted] = FALSE;
                             }
                             $this->db->update($table, $simple_array, array($pk_field=>$pk));
                         }
@@ -667,28 +682,35 @@ class Go_Model extends CI_Model
                             if($this->_created_at != '')
                             {
                                 $simple_array[$this->_created_at] = $timestamp;
-                                $this->__set($this->_created_at, $timestamp);
+                                $this->_values[$this->_created_at] = $timestamp;
                             }
                             if($this->_deleted != '')
                             {
                                 $simple_array[$this->_deleted] = FALSE;
-                                $this->__set($this->_deleted, FALSE);
+                                $this->_values[$this->_deleted] = FALSE;
                             }
                             // insert
                             $this->db->insert($table, $simple_array);
                             $pk = $this->db->insert_id();
-                            $this->__set($pk_field, $pk);
+                            $this->_values[$pk_field] = $pk;
                         }
 
-                        // data has been save, reset modified flag to false 
+                        // set modified flag to FALSE
                         $this->_modified = FALSE;
                     }
+
 
                     // update foreign keys of children
                     if($propagate)
                     {
                         foreach($this->_children as $alias=>$child_config)
                         {
+                            // if children was not loaded, don't load it, just skip
+                            if(!in_array($alias, $this->_fetched_children))
+                            {
+                                //continue;
+                            }
+
                             $fk = $child_config['foreign_key'];    
                             $children = $this->__get($alias);
                             $new_children = array();
@@ -700,15 +722,15 @@ class Go_Model extends CI_Model
                                 }
 
                                 // set foreign key and save
-                                $child->__set($fk, $pk);
-                                $child->_do_save($success, $error_message, FALSE);
+                                $child->_values[$fk] = $pk;
+                                $child->_do_save($success, $error_message);
                                 $new_children[] = $child;
                                 if(!$success)
                                 {
                                     break;
                                 }
                             }
-                            $this->__set($alias, $new_children);
+                            $this->_values[$alias] =& $new_children;
                         }
                     }
 
@@ -745,6 +767,8 @@ class Go_Model extends CI_Model
         {
             $this->db->trans_rollback();
         }
+
+        $this->_evaluated = FALSE;
 
         return array('success' => $success, 'error_message' => $error_message);
     }

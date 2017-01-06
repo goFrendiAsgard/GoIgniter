@@ -643,7 +643,17 @@ class Test extends Test_Controller
         $expected_result = 'Lord Commander Jon Snow';
         $test = $node_list[0]->code;
         $this->unit->run($test, $expected_result, 'Full_Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'")');
+
+        // Test add grand parent
+        $ned = Full_Test_Node::find_by_id(2);
+        $ned->parent->parent = new Test_Node(array('code'=>'Edwyle Stark'));
+        $ned->save();
+
+        $test = $this->db->count_all('test_node');
+        $expected_result = 7;
+        $this->unit->run($test, $expected_result, 'add Edwyle Stark');
     }
+
 
     function test_minimal_orm()
     {
