@@ -1,6 +1,7 @@
 <?php
 namespace Modules\Cms\Models;
 
+use \MY_Config;
 use \Modules\Cms\Mutator;
 
 class Genesis extends \CI_Model

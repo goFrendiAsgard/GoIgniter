@@ -44,7 +44,11 @@ class Go_Model extends CI_Model
     ////////////////////////////////////////////////////////////////
 
     protected $_allowed_columns = array();
+    protected $_fetched_parents = array();
+    protected $_fetched_children = array();
+    protected $_fetched_relations = array();
     public $_values = array();
+    public $_modified = TRUE; // by default, _modified flag is true
 
     protected function _set_allowed_columns()
     {
@@ -80,6 +84,7 @@ class Go_Model extends CI_Model
     protected function _data_to_entity(&$data, $class)
     {
         $Go_Model = 'Go_Model';
+        $new_data = NULL;
 
         // if it is already instance of the class
         if($data instanceof $class)
@@ -89,22 +94,23 @@ class Go_Model extends CI_Model
         // if it is instance of Go_Model
         else if($data instanceof $Go_Model)
         {
-            $data = $data->as_array();
+            $new_data = $data->as_array();
         }
         // array and other datatype
         else
         {
-            $data = (array) $data;
+            $new_data = (array) $data;
         }
 
-        return new $class($data, $this->db);
+        return new $class($new_data, $this->db);
     }
 
     public function __get($key)
     {
         if(in_array($key, $this->_allowed_columns))
         {
-            if(array_key_exists($key, $this->_parents))
+            // fetch parent & children is expensive, don't do it if not necessary
+            if(array_key_exists($key, $this->_parents) && !in_array($key, $this->_fetched_parents))
             {
                 // Lazy loading parent in case of foreign key defined
                 if(!array_key_exists($key, $this->_values) || $this->_values[$key] == NULL)
@@ -124,8 +130,11 @@ class Go_Model extends CI_Model
                         }
                     }
                 }
+
+                // save fetched state
+                $this->_fetched_parents[] = $key;
             }
-            else if(array_key_exists($key, $this->_children) && $this->_get_id() != NULL)
+            else if(array_key_exists($key, $this->_children) && !in_array($key, $this->_fetched_children) && $this->_get_id() != NULL)
             {
                 // get child's config
                 $config = $this->_children[$key];
@@ -133,16 +142,33 @@ class Go_Model extends CI_Model
                 $foreign_key = $config['foreign_key'];
 
                 $child_config = $class::_get_static_config();
-                foreach($child_config['parents'] as $alias=>$child_config)
+                foreach($child_config['parents'] as $alias=>$child_parent_config)
                 {
                     // this is the correct child config
-                    if($child_config['model'] == get_called_class() && $child_config['foreign_key'] == $foreign_key)
+                    if($child_parent_config['model'] == get_called_class() && $child_parent_config['foreign_key'] == $foreign_key)
                     {
                         // get child list
-                        $real_child_list = $class::find_where($foreign_key, $this->_get_id());
+                        $where = array($foreign_key => $this->_get_id());
+                        if($child_config['deleted'] != '')
+                        {
+                            $where[$child_config['deleted']] = FALSE;
+                        }
+                        $real_child_list = $class::find_where($where);
+
+                        // get for current children's id list
+                        $current_children_id_list = array();
+                        $child_pk = $child_config['id'];
+                        foreach($this->_values[$key] as $child)
+                        {
+                            if(array_key_exists($child_pk, $child->_values))
+                            {
+                                $current_children_id_list[] = $child->_values[$child_pk];
+                            }
+                        }
+
                         foreach($real_child_list as &$real_child)
                         {
-                            if(!in_array($real_child, $this->_values[$key]))
+                            if(!in_array($real_child->_values[$child_pk], $current_children_id_list))
                             {
                                 $real_child->_set_parent($alias, $this);
                             }
@@ -150,6 +176,9 @@ class Go_Model extends CI_Model
                         break;
                     }
                 }
+
+                // save fetched state
+                $this->_fetched_children[] = $key;
             }
 
             // get from _values
@@ -180,31 +209,70 @@ class Go_Model extends CI_Model
         }
 
         // look for parent's children configuration refering to this model
-        $parent_config = $parent->_get_config();
-        foreach($parent_config['children'] as $alias => $config)
+        $backref_relation_name = $this->_get_backref_relation($relation_name);
+        if($backref_relation_name != NULL)
         {
-            // if it is the correct configuration, add this model as parent's child
-            if($config['model'] == $class_name && $config['foreign_key'] == $foreign_key)
+            $parent_config = $parent->_get_config();
+            $parent_children = $parent->_values[$backref_relation_name];
+            // if is exists don't need to do anything. This is also the recursive breaker
+            if(!in_array($this, $parent_children))
             {
-                $parent_children = $parent->_values[$alias];
-                // if is exists don't need to do anything. This is also the recursive breaker
-                if(!in_array($this, $parent_children))
-                {
-                    $parent->_values[$alias][] = &$this;
-                }
-                break;
+                $parent->_values[$backref_relation_name][] =& $this;
             }
         }
 
         // finally after parent's value has been altered as necessary add parent's reference to this model
-        $this->_values[$relation_name] = &$parent;
+        $this->_values[$relation_name] =& $parent;
         $this->_values[$foreign_key] = $parent->_get_id();
+    }
+
+
+    public function _unset_parent($relation_name)
+    {
+        // get parent's class name and foreign key from this table to parent
+        $relation_config = $this->_parents[$relation_name];
+        $class_name = $relation_config['model'];
+        $foreign_key = $relation_config['foreign_key'];
+
+        $parent =& $this->_values[$relation_name];
+        if($parent != NULL)
+        {
+            // look for parent's children configuration refering to this model
+            $backref_relation_name = $this->_get_backref_relation($relation_name);
+            if($backref_relation_name != NULL)
+            {
+                $parent_config = $parent->_get_config();
+                $parent_children = $parent->_values[$backref_relation_name];
+                $new_parent_children = array();
+                foreach($parent_children as &$parent_child)
+                {
+                    if($parent_child != $this)
+                    {
+                        $new_parent_children[] = $parent_child;
+                    }
+                }
+                $parent->_values[$backref_relation_name] =& $new_parent_children;
+            }
+        }
+
+        // finally after parent's value has been altered as necessary set this parent's reference to NULL 
+        $this->_values[$relation_name] = NULL;
+        $this->_values[$foreign_key] = NULL;
     }
 
     public function __set($key, $val)
     {
         if(in_array($key, $this->_allowed_columns))
         {
+            // don't do anything if nothing changed
+            if(array_key_exists($key, $this->_values) && $this->_values[$key] == $val)
+            {
+                return FALSE;
+            }
+            
+            // set modified flag to true
+            $this->_modified = TRUE;
+
             $current_pk = $this->_get_id();
 
             // children 
@@ -261,6 +329,11 @@ class Go_Model extends CI_Model
         return $this->__get($this->_id);
     }
 
+    public function _is_deleted()
+    {
+        return $this->__get($this->_deleted);
+    }
+
     public function _get_config()
     {
         return array(
@@ -270,11 +343,44 @@ class Go_Model extends CI_Model
             'deleted_at' => $this->_deleted_at,
             'updated_at' => $this->_updated_at,
             'deleted_at' => $this->_deleted_at,
-            'deleted' => $this->deleted,
+            'deleted' => $this->_deleted,
             'columns' => $this->_columns,
             'children' => $this->_children,
             'parents' => $this->_parents,
         );
+    }
+
+    public function _get_backref_relation($relation_name)
+    {
+        if(array_key_exists($relation_name, $this->_parents))
+        {
+            $config = $this->_parents[$relation_name];
+            $backref_class = $config['model'];
+            $backref_config = $backref_class::_get_static_config();
+            $backref_children = $backref_config['children'];
+            foreach($backref_children as $backref_relation=>$backref_child_config)
+            {
+                if($backref_child_config['model'] == get_called_class() && $backref_child_config['foreign_key'] == $config['foreign_key'])
+                {
+                    return $backref_relation;
+                }
+            }
+        }
+        else if(array_key_exists($relation_name, $this->_children))
+        {
+            $config = $this->_children[$relation_name];
+            $backref_class = $config['model'];
+            $backref_config = $backref_class::_get_static_config();
+            $backref_parents = $backref_config['parents'];
+            foreach($backref_parents as $backref_relation=>$backref_parent_config)
+            {
+                if($backref_parent_config['model'] == get_called_class() && $backref_parent_config['foreign_key'] == $config['foreign_key'])
+                {
+                    return $backref_relation;
+                }
+            }
+        }
+        return NULL;
     }
 
     protected function _sanitize_properties()
@@ -364,7 +470,7 @@ class Go_Model extends CI_Model
         // remove or repair invalid children
         foreach($this->_children as $alias => &$children_config)
         {
-            if(!isset($children_config['foreign_key']) || !isset($children_config['model']))
+            if(in_array($alias, $this->_parents) || !isset($children_config['foreign_key']) || !isset($children_config['model']))
             {
                 unset($this->_children[$alias]);
             }
@@ -382,20 +488,7 @@ class Go_Model extends CI_Model
                     $children_config['on_purge'] = $children_config['on_delete'];
                 }
             }
-
         }
-
-
-        // assign default values for fields if values set from properties and not started with '_'
-        foreach($this->_allowed_columns as $col)
-        {
-            if(strpos($col, '_')!== 0 && isset($this->$col))
-            {
-                $this->__set($col, $this->$col);
-                unset($this->$col);
-            }
-        }
-
     }
 
     public function __construct($obj=array(), $db = NULL)
@@ -413,6 +506,16 @@ class Go_Model extends CI_Model
 
         $this->_sanitize_properties();
         $this->_set_allowed_columns();
+
+        // assign default values for fields if values set from properties and not started with '_'
+        foreach($this->_allowed_columns as $col)
+        {
+            if(strpos($col, '_')!== 0 && isset($this->$col))
+            {
+                $this->__set($col, $this->$col);
+                unset($this->$col);
+            }
+        }
 
         // on creation, children should be empty array if not defined
         foreach(array_keys($this->_children) as $key)
@@ -487,7 +590,7 @@ class Go_Model extends CI_Model
 
         // is this old_record?
         $is_old_record = $pk != NULL;
-        if(!$is_old_record)
+        if($is_old_record)
         {
             $record_count = $this->db->select('*')
                 ->from($table)
@@ -518,7 +621,7 @@ class Go_Model extends CI_Model
                     {
                         // skip if parent is NULL
                         $parent = $this->__get($alias);
-                        if($parent == NULL){ continue; }
+                        if($parent == NULL || $parent->_is_deleted()){ continue; }
 
                         // get foreign key and save
                         $parent->_do_save($success, $error_message, FALSE);
@@ -537,41 +640,48 @@ class Go_Model extends CI_Model
 
                 if($success)
                 {
-                    // turn to array
-                    $simple_array = $this->as_array(TRUE);
+                    // if nothing changed, don't do insert or update
+                    if($this->_modified && !$this->_is_deleted())
+                    {
+                        // turn to array
+                        $simple_array = $this->as_array(TRUE);
 
-                    // if is_old_record, then update, otherwise insert. Add timestamp as needed
-                    if($is_old_record)
-                    {
-                        if($this->_updated_at != '')
+                        // if is_old_record, then update, otherwise insert. Add timestamp as needed
+                        if($is_old_record)
                         {
-                            $simple_array[$this->_updated_at] = $timestamp;
-                            $this->__set($this->_updated_at, $timestamp);
+                            if($this->_updated_at != '')
+                            {
+                                $simple_array[$this->_updated_at] = $timestamp;
+                                $this->__set($this->_updated_at, $timestamp);
+                            }
+                            if($this->_deleted != '')
+                            {
+                                $simple_array[$this->_deleted] = FALSE;
+                                $this->__set($this->_deleted, FALSE);
+                            }
+                            $this->db->update($table, $simple_array, array($pk_field=>$pk));
                         }
-                        if($this->_deleted != '')
+                        else
                         {
-                            $simple_array[$this->_deleted] = FALSE;
-                            $this->__set($this->_deleted, FALSE);
+                            // add timestamp and default _deleted value
+                            if($this->_created_at != '')
+                            {
+                                $simple_array[$this->_created_at] = $timestamp;
+                                $this->__set($this->_created_at, $timestamp);
+                            }
+                            if($this->_deleted != '')
+                            {
+                                $simple_array[$this->_deleted] = FALSE;
+                                $this->__set($this->_deleted, FALSE);
+                            }
+                            // insert
+                            $this->db->insert($table, $simple_array);
+                            $pk = $this->db->insert_id();
+                            $this->__set($pk_field, $pk);
                         }
-                        $this->db->update($table, $simple_array, array($pk_field=>$pk));
-                    }
-                    else
-                    {
-                        // add timestamp and default _deleted value
-                        if($this->_created_at != '')
-                        {
-                            $simple_array[$this->_created_at] = $timestamp;
-                            $this->__set($this->_created_at, $timestamp);
-                        }
-                        if($this->_deleted != '')
-                        {
-                            $simple_array[$this->_deleted] = FALSE;
-                            $this->__set($this->_deleted, FALSE);
-                        }
-                        // insert
-                        $this->db->insert($table, $simple_array);
-                        $pk = $this->db->insert_id();
-                        $this->__set($pk_field, $pk);
+
+                        // data has been save, reset modified flag to false 
+                        $this->_modified = FALSE;
                     }
 
                     // update foreign keys of children
@@ -584,6 +694,11 @@ class Go_Model extends CI_Model
                             $new_children = array();
                             foreach($children as $child)
                             {
+                                if($child->_is_deleted())
+                                {
+                                    continue;
+                                }
+
                                 // set foreign key and save
                                 $child->__set($fk, $pk);
                                 $child->_do_save($success, $error_message, FALSE);
@@ -667,8 +782,8 @@ class Go_Model extends CI_Model
         $this->before_delete($success, $error_message);
         if($success)
         {
-            // get data
-            $simple_array = $this->as_array(TRUE);
+            // Don't need to change anything else 
+            $simple_array = array();
 
             // add timestamp, and update deleted
             if($this->_deleted_at != '')
@@ -683,6 +798,12 @@ class Go_Model extends CI_Model
             }
             $this->db->update($table, $simple_array, array($pk_field=>$pk));
 
+            // cut of relationship with parents
+            foreach($this->_parents as $alias=>$config)
+            {
+                $this->_unset_parent($alias);
+            }
+
             // update foreign keys of children
             if($propagate)
             {
@@ -691,34 +812,31 @@ class Go_Model extends CI_Model
                     $fk = $child_config['foreign_key'];    
                     $on_delete = $child_config['on_delete'];
                     $children = $this->__get($alias);
-                    $new_children = array();
+
+                    $backref_alias = $this->_get_backref_relation($alias);
 
                     // set foreign key and delete
                     switch($on_delete)
                     {
                         case 'set_null' :
-                            foreach($children as $child)
+                            foreach($children as &$child)
                             {
-                                $child->__set($fk, NULL);
+                                $child->_unset_parent($backref_alias);
                                 $child->_do_save($success, $error_message, FALSE);
-                                $new_child[] = $child;
                             }
-                            $this->__set($alias, $new_children);
                             break;
 
                         case 'cascade'  :
-                            foreach($children as $child)
+                            foreach($children as &$child)
                             {
-                                $child->__set($fk, $pk);
                                 $child->_do_delete($success, $error_message, FALSE);
                                 $new_child[] = $child;
                             }
-                            $this->__set($alias, $new_children);
                             break;
 
                         case 'restrict' :
                         default :
-                            foreach($children as $child)
+                            foreach($children as &$child)
                             {
                                 $success = FALSE;
                                 $error_message = 'Deletion cannot be performed. There is a ' . $alias . ' in database';
@@ -787,6 +905,12 @@ class Go_Model extends CI_Model
 
             $this->db->delete($table, array($pk_field=>$pk));
 
+            // cut of relationship with parents
+            foreach($this->_parents as $alias=>$config)
+            {
+                $this->_unset_parent($alias);
+            }
+
             // update foreign keys of children
             if($propagate)
             {
@@ -795,37 +919,34 @@ class Go_Model extends CI_Model
                     $fk = $child_config['foreign_key'];    
                     $on_purge = $child_config['on_purge'];
                     $children = $this->__get($alias);
-                    $new_children = array();
 
-                    // set foreign key and purge
+                    $backref_alias = $this->_get_backref_relation($alias);
+
+                    // set foreign key and delete
                     switch($on_purge)
                     {
                         case 'set_null' :
-                            foreach($children as $child)
+                            foreach($children as &$child)
                             {
-                                $child->__set($fk, NULL);
+                                $child->_unset_parent($backref_alias);
                                 $child->_do_save($success, $error_message, FALSE);
-                                $new_child[] = $child;
                             }
-                            $this->__set($alias, $new_children);
                             break;
 
                         case 'cascade'  :
-                            foreach($children as $child)
+                            foreach($children as &$child)
                             {
-                                $child->__set($fk, $pk);
-                                $child->_do_purge($success, $error_message, FALSE);
+                                $child->_do_delete($success, $error_message, FALSE);
                                 $new_child[] = $child;
                             }
-                            $this->__set($alias, $new_children);
                             break;
 
                         case 'restrict' :
                         default :
-                            foreach($children as $child)
+                            foreach($children as &$child)
                             {
                                 $success = FALSE;
-                                $error_message = 'Purge Deletion cannot be performed. There is a ' . $alias . ' in database';
+                                $error_message = 'Deletion cannot be performed. There is a ' . $alias . ' in database';
                                 break;
                             }
                     }
@@ -996,7 +1117,9 @@ class Go_Model extends CI_Model
         $return = array();
         foreach($query->result_array() as $row)
         {
-            $return[] = new $class($row, $db);
+            $obj= new $class($row, $db);
+            $obj->_modified = FALSE;
+            $return[] = $obj;
         }
         return $return;
     }

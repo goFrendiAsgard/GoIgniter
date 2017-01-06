@@ -55,6 +55,11 @@ class Full_Test_Node extends \Go_Model
     {
         $this->child_count = count($this->children);
     }
+
+    protected function after_delete(&$success, &$error_message)
+    {
+    }
+
 }
 
 
@@ -375,25 +380,23 @@ class Test extends Test_Controller
 
     function test_asset_url()
     {
-        $expected_result = base_url('assets/modules/cms/jquery-3.1.1.min.js');
-        $test = asset_url('cms/jquery-3.1.1.min.js');
-        $this->unit->run($test, $expected_result, 'Asset URL of CMS\'s Jquery');
-
         $expected_result = base_url('assets/modules/cms/bootstrap-4.0.0-alpha.5-dist/css/bootstrap.min.css');
         $test = asset_url('cms/bootstrap-4.0.0-alpha.5-dist/css/bootstrap.min.css');
         $this->unit->run($test, $expected_result, 'Asset URL of CMS\'s Bootstrap');
+
+        $expected_result = base_url('assets/modules/cms/jquery-3.1.1.min.js');
+        $test = asset_url('cms/jquery-3.1.1.min.js');
+        $this->unit->run($test, $expected_result, 'Asset URL of CMS\'s Jquery');
 
         $old_server_name = $_SERVER['SERVER_NAME'];
 
         $_SERVER['SERVER_NAME'] = 'bukurai.com';
 
-        $expected_result = base_url('assets/modules/cms/jquery-3.1.1.min.js');
         $test = asset_url('cms/jquery-3.1.1.min.js');
         $this->unit->run($test, $expected_result, 'Asset URL of bukurai.com\'s CMS\'s Jquery');
 
         $_SERVER['SERVER_NAME'] = 'incognito.'.$old_server_name;
 
-        $expected_result = base_url('assets/modules/cms/jquery-3.1.1.min.js');
         $test = asset_url('cms/jquery-3.1.1.min.js');
         $this->unit->run($test, $expected_result, 'Asset URL of incognito\'s CMS\'s Jquery');
 
@@ -422,6 +425,10 @@ class Test extends Test_Controller
         $expected_result = str_replace('://'.$hostname, '://'.$_SERVER['SERVER_NAME'], base_url('index.php/cms'));
         $test = site_url('cms');
         $this->unit->run($test, $expected_result, 'site URL of incognito\'s CMS');
+
+        $expected_result = base_url('index.php/cms');
+        $test = site_url('cms');
+        $this->unit->run($test, $expected_result, 'site URL of evil.com (host header injection). This should be no evil.com there');
 
         $_SERVER['SERVER_NAME'] = $old_server_name;
     }
@@ -529,10 +536,7 @@ class Test extends Test_Controller
 
         $expected_result = 1;
         $test = $test_node->parent->id;
-        $this->unit->run($test, $expected_result, '$test_node->parent->id should yield 1');
-
-        $test = $test_node->parent_id;
-        $this->unit->run($test, $expected_result, '$test_node->parent_id should also yield 1');
+        $this->unit->run($test, $expected_result, '$test_node->parent->id should also yield 1');
         
         $expected_result = 3;
         $test = $test_node->children[0]->id;
@@ -567,20 +571,30 @@ class Test extends Test_Controller
         // delete
         $test_node->children[0]->delete();
 
+        $expected_result = 'Jon Snow';
+        $test = $test_node->children[0]->code;
+        $this->unit->run($test, $expected_result, 'Robb has been deleted, the first child of Ned should be Jon Snow');
+
+        $robb = Full_Test_Node::find_by_id(3);
+
         $expected_result = TRUE;
-        $test = $test_node->children[0]->deleted;
-        $this->unit->run($test, $expected_result, 'node Robb deleted should be TRUE');
+        $test = $robb->deleted;
+        $this->unit->run($test, $expected_result, 'Robb\'s deleted should be TRUE');
         
         $expected_result = TRUE;
-        $test = $test_node->children[0]->deleted_at != NULL;
-        $this->unit->run($test, $expected_result, 'node Robb deleted_at should not be NULL');
+        $test = $robb->deleted_at != NULL;
+        $this->unit->run($test, $expected_result, 'Robb\'s deleted_at should not be NULL');
+
+        $expected_result = 7;
+        $test = $this->db->count_all('test_node');
+        $this->unit->run($test, $expected_result, 'node Robb was deleted but not purged, there should be 7 record in the table');
 
         // purge
-        $test_node->children[0]->purge();
+        $robb->purge();
 
         $expected_result = 6;
         $test = $this->db->count_all('test_node');
-        $this->unit->run($test, $expected_result, 'node Robb _purged, only 6 record available in the table now');
+        $this->unit->run($test, $expected_result, 'node Robb is purged, only 6 record available in the table now');
 
         // test find_by_id
         $ned = Full_Test_Node::find_by_id(2);
@@ -598,6 +612,16 @@ class Test extends Test_Controller
         $test = count($ned->children);
         $this->unit->run($test, $expected_result, 'count($ned->children); should give you 4');
 
+        // try to get and update jon snow
+        $jon_snow = $ned->children[0];
+        $jon_snow->code = 'Lord Commander Jon Snow';
+        $jon_snow->save();
+
+        $node_list = Full_Test_Node::find_where('code', 'Lord Commander Jon Snow');
+        $expected_result = 'Lord Commander Jon Snow';
+        $test = $node_list[0]->code;
+        $this->unit->run($test, $expected_result, 'Updating Jon Snow into Lord Commander Jon Snow');
+
         // test find_all
         $node_list = Full_Test_Node::find_all();
         $expected_result = 6;
@@ -606,17 +630,17 @@ class Test extends Test_Controller
 
         // ORM is cool, but I want to try query
         $node_list = Full_Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
-        $expected_result = 'Jon Snow';
+        $expected_result = 'Lord Commander Jon Snow';
         $test = $node_list[0]->code;
         $this->unit->run($test, $expected_result, 'Full_Test_Node::find_by_query($this->db->select(\'*\')->from(\'test_node\')->like(\'code\', \'snow\')); should give you Jon Snow');
 
         $node_list = Full_Test_Node::find_by_query($this->db->query("SELECT * FROM go_test_node WHERE code LIKE '%snow%'"));
-        $expected_result = 'Jon Snow';
+        $expected_result = 'Lord Commander Jon Snow';
         $test = $node_list[0]->code;
         $this->unit->run($test, $expected_result, 'Full_Test_Node::find_by_query($this->db->query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'"))');
         
         $node_list = Full_Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE '%snow%'");
-        $expected_result = 'Jon Snow';
+        $expected_result = 'Lord Commander Jon Snow';
         $test = $node_list[0]->code;
         $this->unit->run($test, $expected_result, 'Full_Test_Node::find_by_query("SELECT * FROM go_test_node WHERE code LIKE \'%snow%\'")');
     }

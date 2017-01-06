@@ -32,4 +32,5 @@ class Go_Migration extends CI_Migration
         ));
         $this->dbforge->add_key('id', TRUE);
     }
+
 }

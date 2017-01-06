@@ -281,6 +281,17 @@ if(!function_exists('view'))
     }
 }
 
+if(!function_exists('reload_config'))
+{
+    function reload_config()
+    {
+        include_once(APPPATH.'core/MY_Config.php');
+        $new_config = new MY_Config();
+        $CI =& get_instance();
+        $CI->config =& $new_config;
+    }
+}
+
 
 if(!function_exists('asset_url'))
 {
@@ -295,14 +306,14 @@ if(!function_exists('asset_url'))
         }
 
         // in case of MY_Config never initialiezed, init MY_Config so that it will be cached
-        if(empty(get_instance()->config->base_url()))
+        if(empty(get_instance()->config->asset_url()))
         {
-            include_once(APPPATH.'core/MY_Config.php');
-            new MY_Config();
+            reload_config();
         }
         return get_instance()->config->asset_url($uri, $protocol);
     }
 }
+
 
 if(!function_exists('base_url'))
 {
@@ -311,8 +322,7 @@ if(!function_exists('base_url'))
         // in case of MY_Config never initialiezed, init MY_Config so that it will be cached
         if(empty(get_instance()->config->base_url()))
         {
-            include_once(APPPATH.'core/MY_Config.php');
-            new MY_Config();
+            reload_config();
         }
         return get_instance()->config->base_url($uri, $protocol);
     }
@@ -324,20 +334,11 @@ if(!function_exists('site_url'))
     function site_url($uri = '', $protocol = NULL)
     {
         // in case of MY_Config never initialiezed, init MY_Config so that it will be cached
-        if(empty(get_instance()->config->base_url()))
+        if(empty(get_instance()->config->site_url()))
         {
-            include_once(APPPATH.'core/MY_Config.php');
-            new MY_Config();
+            reload_config();
         }
-
-        // site_url need special treatment
-        $config = get_instance()->config;
-        $hostname = $config->config['hostname'];
-        $actual_hostname = $_SERVER['SERVER_NAME'];
-
-        $site_url = $config->site_url($uri, $protocol);
-        $site_url = str_replace('://'.$hostname, '://'.$actual_hostname, $site_url);
-        return $site_url;
+        return get_instance()->config->site_url($uri, $protocol);
     }
 }
 

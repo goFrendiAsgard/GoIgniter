@@ -118,6 +118,10 @@ class Test_Controller extends \CI_Controller
             }
         }
 
+        // get general informations
+        $memory_usage = $this->benchmark->memory_usage();
+        $elapsed_time = $this->benchmark->elapsed_time();
+
         // get db queries and query times
         $queries = array();
         $total_queries = 0;
@@ -137,13 +141,15 @@ class Test_Controller extends \CI_Controller
 
         // send to view
         $data = array(
-            'result' => $result,
-            'total' => $result_count,
-            'passed' => $passed_count,
-            'failed' => $failed_count,
+            'tests' => $result,
+            'total_tests' => $result_count,
+            'passed_tests' => $passed_count,
+            'failed_tests' => $failed_count,
             'queries' => $queries,
             'total_queries' => $total_queries,
             'total_query_time' => $total_query_time,
+            'memory_usage' => $memory_usage,
+            'elapsed_time' => $elapsed_time,
         );
 
         view('cms/test_controller_index', $data);

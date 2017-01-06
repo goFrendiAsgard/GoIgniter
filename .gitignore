@@ -38,3 +38,4 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 /modules/cms/.mutation
 /modules/cms/.genesis
 /modules/cms/mutation_backup/*.php.bak
+/composer.lock
