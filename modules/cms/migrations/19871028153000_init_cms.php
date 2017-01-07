@@ -4,185 +4,87 @@ class Migration_Init_cms extends Go_Migration {
 
     public function up()
     {
-        ////////////////////////////////////////////////////////////
         // Create test_node
-        ////////////////////////////////////////////////////////////
         $this->add_default_fields();
-        $this->dbforge->add_field(array(
-            'code' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
-            'parent_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-            ),
-            'child_count' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-            ),
-
+        $this->add_field(array(
+            'code'          => $this->TYPE_VARCHAR_255,
+            'parent_id'     => $this->TYPE_FOREIGN_KEY,
+            'child_count'   => $this->TYPE_INT_20_UNSIGNED_NULL,
         ));
-        $this->dbforge->create_table('test_node');
+        $this->create_table('test_node');
 
-        ////////////////////////////////////////////////////////////
         // Create module
-        ////////////////////////////////////////////////////////////
         $this->add_default_fields();
-        $this->dbforge->add_field(array(
-            'code' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
+        $this->add_field(array(
+            'code'      => $this->TYPE_VARCHAR_255,
         ));
-        $this->dbforge->create_table('cms_module');
+        $this->create_table('cms_module');
 
-        ////////////////////////////////////////////////////////////
         // Create site
-        ////////////////////////////////////////////////////////////
         $this->add_default_fields();
-        $this->dbforge->add_field(array(
-            'code' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
+        $this->add_field(array(
+            'code'      => $this->TYPE_VARCHAR_255,
         ));
-        $this->dbforge->create_table('cms_site');
+        $this->create_table('cms_site');
 
-        ////////////////////////////////////////////////////////////
         // Create site_alias
-        ////////////////////////////////////////////////////////////
         $this->add_default_fields();
-        $this->dbforge->add_field(array(
-            'site_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-            ),
-            'alias' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
+        $this->add_field(array(
+            'site_id'   => $this->TYPE_FOREIGN_KEY,
+            'alias'     => $this->TYPE_VARCHAR_255,
         ));
-        $this->dbforge->create_table('cms_site_alias');
+        $this->create_table('cms_site_alias');
 
-        ////////////////////////////////////////////////////////////
         // Create site_module
-        ////////////////////////////////////////////////////////////
         $this->add_default_fields();
-        $this->dbforge->add_field(array(
-            'site_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-            ),
-            'module_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-            ),
+        $this->add_field(array(
+            'site_id'   => $this->TYPE_FOREIGN_KEY,
+            'module_id' => $this->TYPE_FOREIGN_KEY,
         ));
-        $this->dbforge->create_table('cms_site_module');
+        $this->create_table('cms_site_module');
 
-        ////////////////////////////////////////////////////////////
         // Create config
-        ////////////////////////////////////////////////////////////
         $this->add_default_fields();
-        $this->dbforge->add_field(array(
-            'site_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-            ),
-            'module_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-            ),
-            'key' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
-            'value' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
-            'json_options' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
+        $this->add_field(array(
+            'site_id'       => $this->TYPE_FOREIGN_KEY,
+            'module_id'     => $this->TYPE_FOREIGN_KEY,
+            'type'          => $this->TYPE_VARCHAR_255,
+            'key'           => $this->TYPE_VARCHAR_255,
+            'value'         => $this->TYPE_VARCHAR_255,
+            'json_options'  => $this->TYPE_VARCHAR_255,
         ));
-        $this->dbforge->create_table('cms_config');
+        $this->create_table('cms_config');
 
-        ////////////////////////////////////////////////////////////
         // Create group
-        ////////////////////////////////////////////////////////////
         $this->add_default_fields();
-        $this->dbforge->add_field(array(
-            'site_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-            ),
-            'module_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-            ),
-            'group_name' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
+        $this->add_field(array(
+            'site_id'       => $this->TYPE_FOREIGN_KEY,
+            'module_id'     => $this->TYPE_FOREIGN_KEY,
+            'group_name'    => $this->TYPE_VARCHAR_255,
         ));
-        $this->dbforge->create_table('cms_group');
+        $this->create_table('cms_group');
 
-        ////////////////////////////////////////////////////////////
         // Create user
-        ////////////////////////////////////////////////////////////
         $this->add_default_fields();
-        $this->dbforge->add_field(array(
-            'site_id' => array(
-                'type' => 'INT',
-                'constraint' => 20,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-            ),
-            'user_name' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-            ),
-            'hashed_password' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-                'null' => TRUE,
-            ),
-            'email' => array(
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-                'null' => TRUE,
-            ),
+        $this->add_field(array(
+            'site_id'           => $this->TYPE_FOREIGN_KEY,
+            'user_name'         => $this->TYPE_VARCHAR_255,
+            'hashed_password'   => $this->TYPE_VARCHAR_255,
+            'email'             => $this->TYPE_VARCHAR_255,
         ));
-        $this->dbforge->create_table('cms_user');
+        $this->create_table('cms_user');
 
     }
 
     public function down()
     {
-        $this->dbforge->drop_table('cms_user');
-        $this->dbforge->drop_table('cms_group');
-        $this->dbforge->drop_table('cms_config');
-        $this->dbforge->drop_table('cms_site_module');
-        $this->dbforge->drop_table('cms_site_alias');
-        $this->dbforge->drop_table('cms_site');
-        $this->dbforge->drop_table('cms_module');
-        $this->dbforge->drop_table('test_node');
+        $this->drop_table('cms_user');
+        $this->drop_table('cms_group');
+        $this->drop_table('cms_config');
+        $this->drop_table('cms_site_module');
+        $this->drop_table('cms_site_alias');
+        $this->drop_table('cms_site');
+        $this->drop_table('cms_module');
+        $this->drop_table('test_node');
     }
 }

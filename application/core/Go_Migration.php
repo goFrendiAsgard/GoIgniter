@@ -33,6 +33,14 @@ class Go_Migration extends CI_Migration
         $this->dbforge->add_key('id', TRUE);
     }
 
+    public function __call($method, $arguments)
+    {
+        if(method_exists($this->dbforge, $method))
+        {
+            return call_user_func_array(array($this->dbforge, $method), $arguments);
+        }
+    }
+
     public function __get($var)
     {
         if(strpos(strtoupper($var), 'TYPE_') === 0)
@@ -42,7 +50,16 @@ class Go_Migration extends CI_Migration
             $var = strtoupper($var);
             $var = str_replace("NOT_NULL", "NOTNULL", $var);
 
-            if($var == 'KEY')
+            if($var == 'FOREIGN_KEY' || $var == 'FOREIGNKEY')
+            {
+                return array(
+                    'type' => 'BIGINT',
+                    'constraint' => 20,
+                    'unsigned' => TRUE,
+                    'null' => TRUE,
+                );
+            }
+            else if($var == 'PRIMARY_KEY' || $var == 'PRIMARYKEY' || $var == 'KEY')
             {
                 return array(
                     'type' => 'BIGINT',
@@ -51,6 +68,7 @@ class Go_Migration extends CI_Migration
                     'auto_increment' => TRUE
                 );
             }
+
 
             $result = array(
                 "null" => FALSE,

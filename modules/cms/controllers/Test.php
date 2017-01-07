@@ -671,7 +671,46 @@ class Test extends Test_Controller
     function test_go_migration_alias()
     {
         $go_migration = new Go_Migration();
-        var_dump($go_migration->type_varchar_255);
+
+        $expected_result = array(
+            'type' => 'VARCHAR',
+            'constraint' => 255,
+            'null' => FALSE,
+        );
+        $test = $go_migration->type_varchar_255;
+        $this->unit->run($test, $expected_result, '$go_migration->type_varchar_255 should return the correct type');
+
+        $expected_result = array(
+            'type' => 'BIGINT',
+            'constraint' => 20,
+            'null' => TRUE,
+        );
+        $test = $go_migration->TYPE_BIGINT_20_NULL;
+        $this->unit->run($test, $expected_result, '$go_migration->TYPE_BIGINT_20_NULL should return the correct type');
+
+        $expected_result = array(
+            'type' => 'BIGINT',
+            'constraint' => 20,
+            'unsigned' => TRUE,
+            'null' => TRUE,
+        );
+        $test = $go_migration->TYPE_FOREIGN_KEY;
+        $this->unit->run($test, $expected_result, '$go_migration->TYPE_FOREIGN_KEY should return the correct type');
+
+        $test = $go_migration->TYPE_FOREIGNKEY;
+        $this->unit->run($test, $expected_result, '$go_migration->TYPE_FOREIGNKEY should return the correct type');
+
+        $expected_result = array(
+            'type' => 'BIGINT',
+            'constraint' => 20,
+            'unsigned' => TRUE,
+            'auto_increment' => TRUE
+        );
+        $test = $go_migration->TYPE_PRIMARY_KEY;
+        $this->unit->run($test, $expected_result, '$go_migration->TYPE_PRIMARY_KEY should return the correct type');
+
+        $test = $go_migration->TYPE_PRIMARYKEY;
+        $this->unit->run($test, $expected_result, '$go_migration->TYPE_PRIMARYKEY should return the correct type');
     }
 
 }

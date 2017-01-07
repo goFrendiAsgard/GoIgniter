@@ -1,6 +1,6 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Go_Model extends CI_Model
+abstract class Go_Model extends CI_Model
 {
     ////////////////////////////////////////////////////////////////
     //
@@ -8,13 +8,14 @@ class Go_Model extends CI_Model
     //
     ////////////////////////////////////////////////////////////////
 
-    protected  $_table           = '';
-    protected  $_id              = 'id';
-    protected  $_created_at      = 'created_at';
-    protected  $_deleted_at      = 'deleted_at';
-    protected  $_updated_at      = 'updated_at';
-    protected  $_deleted         = 'deleted';
-    protected  $_columns         = array();
+    protected $_table           = '';
+    protected $_id              = 'id';
+    protected $_created_at      = 'created_at';
+    protected $_deleted_at      = 'deleted_at';
+    protected $_updated_at      = 'updated_at';
+    protected $_deleted         = 'deleted';
+    protected $_columns         = array();
+    protected $_unique_columns  = array();
     
     // array of associative array. Each child should has these keys:
     // "model", "foreign_key", "on_delete", and "on_purge".
@@ -84,6 +85,11 @@ class Go_Model extends CI_Model
 
     protected function _data_to_entity(&$data, $class)
     {
+        if($data === NULL)
+        {
+            return NULL;
+        }
+
         $Go_Model = 'Go_Model';
         $new_data = NULL;
 
@@ -169,6 +175,10 @@ class Go_Model extends CI_Model
 
                         foreach($real_child_list as &$real_child)
                         {
+                            if($real_child === NULL)
+                            {
+                                continue;
+                            }
                             if(!in_array($real_child->_values[$child_pk], $current_children_id_list))
                             {
                                 $real_child->_set_parent($alias, $this);
@@ -199,6 +209,13 @@ class Go_Model extends CI_Model
         $relation_config = $this->_parents[$relation_name];
         $class_name = $relation_config['model'];
         $foreign_key = $relation_config['foreign_key'];
+
+        if($val == NULL)
+        {
+            $this->_values[$relation_name] = NULL;
+            $this->_values[$foreign_key] = NULL;
+            return FALSE;
+        }
 
         // create parent if not exist, or just simply return this val
         $parent = $this->_data_to_entity($val, $class_name);
@@ -295,7 +312,10 @@ class Go_Model extends CI_Model
                         foreach($val as $child_data)
                         {
                             $new_child = $this->_data_to_entity($child_data, $class_name);
-                            $new_child->_set_parent($alias, $this);
+                            if($new_child != NULL)
+                            {
+                                $new_child->_set_parent($alias, $this);
+                            }
                         }
                         $true_config_found = TRUE;
                         break;
@@ -307,7 +327,10 @@ class Go_Model extends CI_Model
                     foreach($val as $child_data)
                     {
                         $new_child = $this->_data_to_entity($child_data, $class_name);
-                        $this->_values[$key][] = $new_child;
+                        if($new_child != NULL)
+                        {
+                            $this->_values[$key][] = $new_child;
+                        }
                     }
                 }
             }
@@ -602,179 +625,228 @@ class Go_Model extends CI_Model
         $is_old_record = $pk != NULL;
         if($is_old_record)
         {
-            $record_count = $this->db->select('*')
-                ->from($table)
-                ->where($pk_field, $pk)->get()
-                ->num_rows();
-            $is_old_record = $record_count > 0;
+            $class = get_called_class();
+            $record = $class::find_by_id($pk, $this->db);
+            $is_old_record = $record !== NULL;
         }
 
-        // before update or before insert
-        if($is_old_record)
+        // protect uniqueness 
+        if(count($this->_unique_columns) > 0)
         {
-            $this->before_update($success, $error_message);
-        }
-        else
-        {
-            $this->before_insert($success, $error_message);
-        }
-
-        if($success)
-        {
-            $this->before_save($success, $error_message);
-            if($success)
+            // assemble where syntax
+            $where = array();
+            foreach($this->_unique_columns as $col)
             {
-                // save parents
-                if($propagate)
+                $where[$col] = $this->__get($col);
+            }
+
+            // get the duplicated records
+            $class = get_called_class();
+            $duplicate_records = $class::find_where($where); 
+
+            if(count($duplicate_records) > 0)
+            {
+                if(!$is_old_record)
                 {
-                    foreach($this->_parents as $alias=>$parent_config)
-                    {
-                        // if parent was not loaded, don't load it, just skip
-                        if(!in_array($alias, $this->_fetched_parents))
-                        {
-                            //continue;
-                        }
-
-                        // skip if parent is NULL
-                        $parent =& $this->_values[$alias];
-                        if($parent == NULL || $parent->_is_deleted()){ continue; }
-
-                        // get foreign key and save
-                        $parent->_do_save($success, $error_message);
-                        if(!$success)
-                        {
-                            break;
-                        }
-
-                        // update foreign key and reference to this field
-                        $fk = $parent_config['foreign_key'];    
-                        $parent_pk = $parent->_get_id();
-                        $this->_values[$fk] = $parent_pk;
-                        $this->_values[$alias] =& $parent;
-                    }
+                    $success = FALSE;
+                    $error_message = 'Record already exists';
                 }
-
-                if($success)
+                else
                 {
-                    // real action (insert/update)
-                    if($this->_modified && !$this->_is_deleted())
+                    foreach($duplicate_records as $record)
                     {
-                        // turn to array
-                        $simple_array = $this->as_array(TRUE);
-
-                        // if is_old_record, then update, otherwise insert. Add timestamp as needed
-                        if($is_old_record)
+                        // if this is old record, compare the primary key, if it is different,
+                        // then it is duplication
+                        if($this->_get_id() != $record->_get_id())
                         {
-                            if($this->_updated_at != '')
-                            {
-                                $simple_array[$this->_updated_at] = $timestamp;
-                                $this->_values[$this->_updated_at] = $timestamp;
-                            }
-                            if($this->_deleted != '')
-                            {
-                                $simple_array[$this->_deleted] = FALSE;
-                                $this->_values[$this->_deleted] = FALSE;
-                            }
-                            $this->db->update($table, $simple_array, array($pk_field=>$pk));
-                        }
-                        else
-                        {
-                            // add timestamp and default _deleted value
-                            if($this->_created_at != '')
-                            {
-                                $simple_array[$this->_created_at] = $timestamp;
-                                $this->_values[$this->_created_at] = $timestamp;
-                            }
-                            if($this->_deleted != '')
-                            {
-                                $simple_array[$this->_deleted] = FALSE;
-                                $this->_values[$this->_deleted] = FALSE;
-                            }
-
-                            // insert
-                            $this->db->insert($table, $simple_array);
-                            $pk = $this->db->insert_id();
-                            $this->_values[$pk_field] = $pk;
-                        }
-
-                        // set modified flag to FALSE
-                        $this->_modified = FALSE;
-                    }
-
-
-                    // update foreign keys of children
-                    if($propagate)
-                    {
-                        foreach($this->_children as $alias=>$child_config)
-                        {
-                            // if children was not loaded, don't load it, just skip
-                            if(!in_array($alias, $this->_fetched_children) && $is_old_record)
-                            {
-                                //continue;
-                            }
-
-                            $fk = $child_config['foreign_key'];    
-                            // $children = $this->__get($alias);
-                            $children = $this->_values[$alias];
-                            $new_children = array();
-                            foreach($children as $child)
-                            {
-                                if($child->_is_deleted())
-                                {
-                                    continue;
-                                }
-
-                                // set foreign key and save
-                                $child->_values[$fk] = $pk;
-                                $child->_do_save($success, $error_message);
-                                $new_children[] = $child;
-                                if(!$success)
-                                {
-                                    break;
-                                }
-                            }
-                            $this->_values[$alias] =& $new_children;
-                        }
-                    }
-
-                    if($success)
-                    {
-                        $this->after_save($success, $error_message);
-                        if($success)
-                        {
-                            // after update or after insert
-                            if($is_old_record)
-                            {
-                                $this->after_update($success, $error_message);
-                            }
-                            else
-                            {
-                                $this->after_insert($success, $error_message);
-                            }
-
-                            // stop transaction
-                            if($success)
-                            {
-                                $this->db->trans_complete();
-                            }
+                            $success = FALSE;
+                            $error_message = 'Record already exists';
+                            break;
                         }
                     }
                 }
             }
         }
 
-        // don't put this in else, because when $success is TRUE 
-        // other evaluations will be performed, and $success might
-        // be changed 
-        if(!$success)
+        // trigger before insert/update
+        if($success)
+        {
+            // before update or before insert
+            if($is_old_record)
+            {
+                $this->before_update($success, $error_message);
+            }
+            else
+            {
+                $this->before_insert($success, $error_message);
+            }
+        }
+
+        // trigger before save
+        if($success)
+        {
+            $this->before_save($success, $error_message);
+        }
+
+        // propagate parent
+        if($success && $propagate)
+        {
+            foreach($this->_parents as $alias=>$parent_config)
+            {
+                // if parent was not loaded, don't load it, just skip
+                if(!in_array($alias, $this->_fetched_parents))
+                {
+                    //continue;
+                }
+
+                // skip if parent is NULL
+                $parent =& $this->_values[$alias];
+                if($parent == NULL || $parent->_is_deleted()){ continue; }
+
+                // get foreign key and save
+                $parent->_do_save($success, $error_message);
+                if(!$success)
+                {
+                    break;
+                }
+
+                // update foreign key and reference to this field
+                $fk = $parent_config['foreign_key'];    
+                $parent_pk = $parent->_get_id();
+                $this->_values[$fk] = $parent_pk;
+                $this->_values[$alias] =& $parent;
+            }
+        }
+
+        // real action (insert/update)
+        if($success)
+        {
+            if($this->_modified && !$this->_is_deleted())
+            {
+                // turn to array
+                $simple_array = $this->as_array(TRUE);
+
+                // something is going to changed, delete cached_result
+                $class = get_called_class();
+                $class::delete_cached_result();
+
+                // if is_old_record, then update, otherwise insert. Add timestamp as needed
+                if($is_old_record)
+                {
+                    if($this->_updated_at != '')
+                    {
+                        $simple_array[$this->_updated_at] = $timestamp;
+                        $this->_values[$this->_updated_at] = $timestamp;
+                    }
+                    if($this->_deleted != '')
+                    {
+                        $simple_array[$this->_deleted] = FALSE;
+                        $this->_values[$this->_deleted] = FALSE;
+                    }
+                    $success = $this->db->update($table, $simple_array, array($pk_field=>$pk));
+                    $error = $this->db->error();
+                    $error_message = $error['message'];
+                }
+                else
+                {
+                    // add timestamp and default _deleted value
+                    if($this->_created_at != '')
+                    {
+                        $simple_array[$this->_created_at] = $timestamp;
+                        $this->_values[$this->_created_at] = $timestamp;
+                    }
+                    if($this->_deleted != '')
+                    {
+                        $simple_array[$this->_deleted] = FALSE;
+                        $this->_values[$this->_deleted] = FALSE;
+                    }
+
+                    // insert
+                    $success = $this->db->insert($table, $simple_array);
+                    $error = $this->db->error();
+                    $error_message = $error['message'];
+
+                    $pk = $this->db->insert_id();
+                    $this->_values[$pk_field] = $pk;
+                }
+
+                // set modified flag to FALSE
+                $this->_modified = FALSE;
+            }
+
+        }
+
+        // update foreign keys of children
+        if($success && $propagate)
+        {
+            foreach($this->_children as $alias=>$child_config)
+            {
+                // if children was not loaded, don't load it, just skip
+                if(!in_array($alias, $this->_fetched_children) && $is_old_record)
+                {
+                    //continue;
+                }
+
+                $fk = $child_config['foreign_key'];    
+                // $children = $this->__get($alias);
+                $children = $this->_values[$alias];
+                $new_children = array();
+                foreach($children as $child)
+                {
+                    if($child->_is_deleted())
+                    {
+                        continue;
+                    }
+
+                    // set foreign key and save
+                    $child->_values[$fk] = $pk;
+                    $child->_do_save($success, $error_message);
+                    $new_children[] = $child;
+                    if(!$success)
+                    {
+                        break;
+                    }
+                }
+                $this->_values[$alias] =& $new_children;
+            }
+        }
+
+        // trigger after save
+        if($success)
+        {
+            $this->after_save($success, $error_message);
+
+        }
+
+        // trigger after update or after insert
+        if($success)
+        {
+            // after update or after insert
+            if($is_old_record)
+            {
+                $this->after_update($success, $error_message);
+            }
+            else
+            {
+                $this->after_insert($success, $error_message);
+            }
+
+        }
+
+        // stop transaction
+        if($success)
+        {
+            $this->db->trans_complete();
+        }
+        else
         {
             $this->db->trans_rollback();
         }
 
         $this->_evaluated = FALSE;
-
         return array('success' => $success, 'error_message' => $error_message);
     }
+
 
     // soft delete this record
     public function delete()
@@ -809,6 +881,10 @@ class Go_Model extends CI_Model
         $this->before_delete($success, $error_message);
         if($success)
         {
+            // something is going to changed, delete cached_result
+            $class = get_called_class();
+            $class::delete_cached_result();
+
             // Don't need to change anything else 
             $simple_array = array();
 
@@ -823,76 +899,76 @@ class Go_Model extends CI_Model
                 $simple_array[$this->_deleted] = TRUE;
                 $this->__set($this->_deleted, TRUE);
             }
-            $this->db->update($table, $simple_array, array($pk_field=>$pk));
+            $success = $this->db->update($table, $simple_array, array($pk_field=>$pk));
+            $error = $this->db->error();
+            $error_message = $error['message'];
 
             // cut of relationship with parents
             foreach($this->_parents as $alias=>$config)
             {
                 $this->_unset_parent($alias);
             }
+        }
 
-            // update foreign keys of children
-            if($propagate)
+        // update foreign keys of children
+        if($success && $propagate)
+        {
+            foreach($this->_children as $alias=>$child_config)
             {
-                foreach($this->_children as $alias=>$child_config)
+                $fk = $child_config['foreign_key'];    
+                $on_delete = $child_config['on_delete'];
+                $children = $this->__get($alias);
+
+                $backref_alias = $this->_get_backref_relation($alias);
+
+                // set foreign key and delete
+                switch($on_delete)
                 {
-                    $fk = $child_config['foreign_key'];    
-                    $on_delete = $child_config['on_delete'];
-                    $children = $this->__get($alias);
-
-                    $backref_alias = $this->_get_backref_relation($alias);
-
-                    // set foreign key and delete
-                    switch($on_delete)
+                case 'set_null' :
+                    foreach($children as &$child)
                     {
-                        case 'set_null' :
-                            foreach($children as &$child)
-                            {
-                                $child->_unset_parent($backref_alias);
-                                $child->_do_save($success, $error_message, FALSE);
-                            }
-                            break;
-
-                        case 'cascade'  :
-                            foreach($children as &$child)
-                            {
-                                $child->_do_delete($success, $error_message, FALSE);
-                                $new_child[] = $child;
-                            }
-                            break;
-
-                        case 'restrict' :
-                        default :
-                            foreach($children as &$child)
-                            {
-                                $success = FALSE;
-                                $error_message = 'Deletion cannot be performed. There is a ' . $alias . ' in database';
-                                break;
-                            }
+                        $child->_unset_parent($backref_alias);
+                        $child->_do_save($success, $error_message, FALSE);
                     }
+                    break;
 
-                    if(!$success)
+                case 'cascade'  :
+                    foreach($children as &$child)
                     {
+                        $child->_do_delete($success, $error_message, FALSE);
+                        $new_child[] = $child;
+                    }
+                    break;
+
+                case 'restrict' :
+                default :
+                    foreach($children as &$child)
+                    {
+                        $success = FALSE;
+                        $error_message = 'Deletion cannot be performed. There is a ' . $alias . ' in database';
                         break;
                     }
                 }
-            }
 
-            if($success)
-            {
-                $this->after_delete($success, $error_message);
-                if($success)
+                if(!$success)
                 {
-                    // stop transaction
-                    $this->db->trans_complete();
+                    break;
                 }
             }
         }
 
-        // don't put this in else, because when $success is TRUE 
-        // other evaluations will be performed, and $success might
-        // be changed 
-        if(!$success)
+        if($success)
+        {
+            $this->after_delete($success, $error_message);
+        }
+
+
+        // stop transaction
+        if($success)
+        {
+            $this->db->trans_complete();
+        }
+        else
         {
             $this->db->trans_rollback();
         }
@@ -927,79 +1003,83 @@ class Go_Model extends CI_Model
         $this->before_purge($success, $error_message);
         if($success)
         {
+            // something is going to changed, delete cached_result
+            $class = get_called_class();
+            $class::delete_cached_result();
+
             // get data
             $simple_array = $this->as_array(TRUE);
 
-            $this->db->delete($table, array($pk_field=>$pk));
+            $success = $this->db->delete($table, array($pk_field=>$pk));
+            $error = $this->db->error();
+            $error_message = $error['message'];
 
             // cut of relationship with parents
             foreach($this->_parents as $alias=>$config)
             {
                 $this->_unset_parent($alias);
             }
+        }
 
-            // update foreign keys of children
-            if($propagate)
+        // update foreign keys of children
+        if($success && $propagate)
+        {
+            foreach($this->_children as $alias=>$child_config)
             {
-                foreach($this->_children as $alias=>$child_config)
+                $fk = $child_config['foreign_key'];    
+                $on_purge = $child_config['on_purge'];
+                $children = $this->__get($alias);
+
+                $backref_alias = $this->_get_backref_relation($alias);
+
+                // set foreign key and delete
+                switch($on_purge)
                 {
-                    $fk = $child_config['foreign_key'];    
-                    $on_purge = $child_config['on_purge'];
-                    $children = $this->__get($alias);
-
-                    $backref_alias = $this->_get_backref_relation($alias);
-
-                    // set foreign key and delete
-                    switch($on_purge)
+                case 'set_null' :
+                    foreach($children as &$child)
                     {
-                        case 'set_null' :
-                            foreach($children as &$child)
-                            {
-                                $child->_unset_parent($backref_alias);
-                                $child->_do_save($success, $error_message, FALSE);
-                            }
-                            break;
-
-                        case 'cascade'  :
-                            foreach($children as &$child)
-                            {
-                                $child->_do_delete($success, $error_message, FALSE);
-                                $new_child[] = $child;
-                            }
-                            break;
-
-                        case 'restrict' :
-                        default :
-                            foreach($children as &$child)
-                            {
-                                $success = FALSE;
-                                $error_message = 'Deletion cannot be performed. There is a ' . $alias . ' in database';
-                                break;
-                            }
+                        $child->_unset_parent($backref_alias);
+                        $child->_do_save($success, $error_message, FALSE);
                     }
+                    break;
 
-                    if(!$success)
+                case 'cascade'  :
+                    foreach($children as &$child)
                     {
+                        $child->_do_purge($success, $error_message, FALSE);
+                        $new_child[] = $child;
+                    }
+                    break;
+
+                case 'restrict' :
+                default :
+                    foreach($children as &$child)
+                    {
+                        $success = FALSE;
+                        $error_message = 'Deletion cannot be performed. There is a ' . $alias . ' in database';
                         break;
                     }
                 }
-            }
 
-            if($success)
-            {
-                $this->after_purge($success, $error_message);
-                if($success)
+                if(!$success)
                 {
-                    // stop transaction
-                    $this->db->trans_complete();
+                    break;
                 }
             }
         }
 
-        // don't put this in else, because when $success is TRUE 
-        // other evaluations will be performed, and $success might
-        // be changed 
-        if(!$success)
+        if($success)
+        {
+            $this->after_purge($success, $error_message);
+        }
+
+
+        if($success)
+        {
+            // stop transaction
+            $this->db->trans_complete();
+        }
+        else
         {
             $this->db->trans_rollback();
         }
@@ -1013,8 +1093,51 @@ class Go_Model extends CI_Model
     //
     ////////////////////////////////////////////////////////////////
 
-    // all configurations should live here
+    // all static configurations should live here
     protected static $_configs;
+
+    // cache SELECT * FROM table
+    protected static $_cached_result;
+    protected static $_is_cachable; // is cached_result allowed (i.e: record in the table less than 1000)
+    protected static $_is_cached; // is cached_result has been cached?
+
+    public static function delete_cached_result()
+    {
+        static::$_cached_result = array();
+        static::$_is_cached = FALSE;
+        static::$_is_cachable = NULL;
+    }
+
+    public static function get_cached_result(&$db = NULL)
+    {
+
+        if($db == NULL)
+        {
+            $CI =& get_instance();
+            $db =& $CI->db;
+        }
+        $config = static::_get_static_config();
+        $table = $config['table'];
+
+        // is this cachable (assuming count of max cachable table is less than 1000)
+        if(static::$_is_cachable === NULL)
+        {
+            static::$_is_cachable = $db->count_all($table) <= 1000;
+        }
+
+        if(static::$_is_cachable)
+        {
+            // cache it
+            if(static::$_is_cached === NULL || static::$_is_cached === FALSE)
+            {
+                static::$_cached_result = $db->get($table)->result_array();
+                static::$_is_cached = TRUE;
+            }
+
+            return static::$_cached_result;
+        }
+        return NULL;
+    }
 
     protected static function _get_static_config()
     {
@@ -1045,25 +1168,51 @@ class Go_Model extends CI_Model
         return self::$_configs[$class];
     }
 
-    public static function find_by_id($id, &$db = NULL)
+    public static function find_all($limit=1000, $offset=0, &$db = NULL)
     {
         // init db and get config
         $config = static::_get_static_config();
         $class = $config['class'];
+        $table = $config['table'];
+        $id_field = $config['id'];
+
+        if($config['deleted'])
+        {
+            return static::find_where($config['deleted'], FALSE, NULL, $limit, $offset, $db);
+        }
+
         if($db == NULL)
         {
             $CI =& get_instance();
             $db =& $CI->db;
         }
-        $table = $config['table'];
-        $id_field = $config['id'];
+
+        // using default parameters? then try to use cache
+        if($limit == 1000 && $offset == 0)
+        {
+            $cached_result = static::get_cached_result($db);
+            if($cached_result != NULL)
+            {
+                return static::result_to_object($cached_result, $db);
+            }
+        }
 
         // prepare query
         $query = $db->select('*')
             ->from($table)
-            ->where($id_field, $id);
+            ->limit($limit, $offset);
 
         $result = static::find_by_query($query);
+        return $result;
+    }
+
+    public static function find_by_id($id, &$db = NULL)
+    {
+        // init db and get config
+        $config = static::_get_static_config();
+        $id_field = $config['id'];
+
+        $result = static::find_where($id_field, $id, NULL, 1000, 0, $db);
         if(count($result) > 0)
         {
             $row = $result[0];
@@ -1072,7 +1221,8 @@ class Go_Model extends CI_Model
         return NULL;
     }
 
-    public static function find_all($limit=1000, $offset=0, $db = NULL)
+
+    public static function find_where($key, $value = NULL, $escape = NULL, $limit=1000, $offset=0, &$db = NULL)
     {
         // init db and get config
         $config = static::_get_static_config();
@@ -1084,33 +1234,60 @@ class Go_Model extends CI_Model
         }
         $table = $config['table'];
         $id_field = $config['id'];
+        $deleted_field = $config['deleted'];
 
-        // prepare query
-        $query = $db->select('*')
-            ->from($table)
-            ->limit($limit, $offset);
-
-        if($config['deleted'] != '')
+        // using default parameters? then try to use cache
+        if($escape === NULL && $limit == 1000 && $offset == 0)
         {
-            $query = $query->where($config['deleted'], FALSE);
-        }
+            // normalize where
+            $where = array();
+            if(is_array($key))
+            {
+                $where = $key;
+            }
+            else
+            {
+                $where = array($key => $value);
+            }
 
-        $result = static::find_by_query($query);
-        return $result;
-    }
+            // is where only contains simple key=>value, or is the key contains comparison?
+            $complex_key = FALSE;
+            foreach($where as $key=>$value)
+            {
+                if(strpos($key, '>') !== FALSE  || strpos($key, '<') !== FALSE  || strpos($key, '!') !== FALSE || strpos($key, '=') !== FALSE)
+                {
+                    $complex_key = TRUE;
+                    break;
+                }
+            }
 
-    public static function find_where($key, $value = NULL, $escape = NULL, $limit=1000, $offset=0, $db = NULL)
-    {
-        // init db and get config
-        $config = static::_get_static_config();
-        $class = $config['class'];
-        if($db == NULL)
-        {
-            $CI =& get_instance();
-            $db =& $CI->db;
+            // if the key contains comparison, it is not going to be easy, just do it the normal way, without cache
+            if(!$complex_key)
+            {
+                $cached_result = static::get_cached_result($db);
+                if($cached_result != NULL)
+                {
+                    $return = array();
+                    foreach($cached_result as $result)
+                    {
+                        $passed = TRUE;
+                        foreach($where as $key=>$value)
+                        {
+                            if($result[$key] != $value)
+                            {
+                                $passed = FALSE;
+                                continue;
+                            }
+                        }
+                        if(!$passed){ continue; }
+
+                        $object_array = static::result_to_object(array($result), $db);
+                        $return[] = $object_array[0];
+                    }
+                    return $return;
+                }
+            }
         }
-        $table = $config['table'];
-        $id_field = $config['id'];
 
         // prepare query
         $query = $db->select('*')
@@ -1124,9 +1301,6 @@ class Go_Model extends CI_Model
 
     public static function find_by_query($query)
     {
-        // get class name 
-        $config = static::_get_static_config();
-        $class = $config['class'];
         $CI =& get_instance();
         $db =& $CI->db;
 
@@ -1140,9 +1314,21 @@ class Go_Model extends CI_Model
             $query = $query->get();
         }
 
+        $sql = $db->last_query(); 
+
         // run query and parse the result
+        return static::result_to_object($query->result_array(), $db);
+    }
+
+    protected static function &result_to_object($array_of_result, &$db)
+    {
+        // get class name 
+        $config = static::_get_static_config();
+        $class = $config['class'];
+
+        // prepare return value
         $return = array();
-        foreach($query->result_array() as $row)
+        foreach($array_of_result as $row)
         {
             $obj= new $class($row, $db);
             $obj->_modified = FALSE;
