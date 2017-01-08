@@ -9,7 +9,7 @@ class Site_Alias extends CMS_Model
     protected $_site_id = '';
     protected $_site_model = '';
     protected $_columns = ['alias', 'site_id'];
-    protected $_unique_columns = ['alias']
+    protected $_unique_columns = ['alias'];
 
     protected $_parents = array(
         'site' => array(
@@ -32,7 +32,7 @@ class Site_Model extends CMS_Model
     protected $_children = array(
         'aliases' => array(
             'model' => '\Modules\Cms\Site_Alias',
-            'foreign_key', => 'site_id',
+            'foreign_key' => 'site_id',
         )
     );
 
@@ -68,25 +68,25 @@ class Site_Model extends CMS_Model
 
     public function before_save(&$success, &$error_message)
     {
-        parent::before_save(&$success, &$error_message);
+        parent::before_save($success, $error_message);
         $this->get_real_old_site_code();
     }
 
     public function before_delete(&$success, &$error_message)
     {
-        parent::before_delete(&$success, &$error_message);
+        parent::before_delete($success, $error_message);
         $this->get_real_old_site_code();
     }
 
     public function before_purge(&$success, &$error_message)
     {
-        parent::before_purge(&$success, &$error_message);
+        parent::before_purge($success, $error_message);
         $this->get_real_old_site_code();
     }
 
     public function after_save(&$success, &$error_message)
     {
-        parent::after_save(&$success, &$error_message);
+        parent::after_save($success, $error_message);
         $this->delete_old_site();
 
         $alises = array();
@@ -101,13 +101,13 @@ class Site_Model extends CMS_Model
 
     public function after_delete(&$success, &$error_message)
     {
-        parent::after_delete(&$success, &$error_message);
+        parent::after_delete($success, $error_message);
         $this->delete_old_site();
     }
 
     public function after_purge(&$success, &$error_message)
     {
-        parent::after_purge(&$success, &$error_message);
+        parent::after_purge($success, $error_message);
         $this->delete_old_site();
     }
 

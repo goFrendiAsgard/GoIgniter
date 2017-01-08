@@ -40,13 +40,14 @@ abstract class Go_Model extends CI_Model
     ////////////////////////////////////////////////////////////////
     //
     // Internally used properties and methods.
-    // Don't override unless you know exactly what they do
+    // Don't override (even if it is public) 
+    // unless you know exactly what they do
     //
     ////////////////////////////////////////////////////////////////
 
-    protected $_allowed_columns = array();
-    protected $_fetched_parents = array();
-    protected $_fetched_children = array();
+    public $_allowed_columns = array();
+    public $_fetched_parents = array();
+    public $_fetched_children = array();
     public $_values = array();
     public $_modified = TRUE; // by default, _modified flag is true
     public $_evaluated = FALSE; // only used in 'save' process, to mark whether this node is already evaluated or not
@@ -210,6 +211,12 @@ abstract class Go_Model extends CI_Model
         $class_name = $relation_config['model'];
         $foreign_key = $relation_config['foreign_key'];
 
+        // set parent as "fetched"
+        if(!in_array($relation_name, $this->_fetched_parents))
+        {
+            $this->_fetched_parents[] = $relation_name;
+        }
+
         if($val == NULL)
         {
             $this->_values[$relation_name] = NULL;
@@ -236,6 +243,12 @@ abstract class Go_Model extends CI_Model
             if(!in_array($this, $parent_children))
             {
                 $parent->_values[$backref_relation_name][] =& $this;
+
+                // parent should also consider this record as "fetched"
+                if(!in_array($backref_relation_name, $parent->_fetched_children))
+                {
+                    $parent->_fetched_children[] = $backref_relation_name;
+                }
             }
         }
 
@@ -596,7 +609,7 @@ abstract class Go_Model extends CI_Model
 
     public function save()
     {
-        $this->_do_save();
+        return $this->_do_save();
     }
 
     // $success and $error_message are passed for every before and after events
@@ -634,11 +647,14 @@ abstract class Go_Model extends CI_Model
         if(count($this->_unique_columns) > 0)
         {
             // assemble where syntax
+            $value_information = array();
             $where = array();
             foreach($this->_unique_columns as $col)
             {
                 $where[$col] = $this->__get($col);
+                $value_information[] = $col . ' : ' . $this->__get($col);
             }
+            $value_information = implode(', ', $value_information);
 
             // get the duplicated records
             $class = get_called_class();
@@ -649,7 +665,7 @@ abstract class Go_Model extends CI_Model
                 if(!$is_old_record)
                 {
                     $success = FALSE;
-                    $error_message = 'Record already exists';
+                    $error_message = 'Record with unique attributes (' . $value_information . ') is already exists on table '.$this->db->dbprefix.$this->_table;
                 }
                 else
                 {
@@ -660,7 +676,7 @@ abstract class Go_Model extends CI_Model
                         if($this->_get_id() != $record->_get_id())
                         {
                             $success = FALSE;
-                            $error_message = 'Record already exists';
+                            $error_message = 'Record with unique attributes (' . $value_information . ') is already exists on table '.$this->db->dbprefix.$this->_table;
                             break;
                         }
                     }
@@ -693,10 +709,9 @@ abstract class Go_Model extends CI_Model
         {
             foreach($this->_parents as $alias=>$parent_config)
             {
-                // if parent was not loaded, don't load it, just skip
                 if(!in_array($alias, $this->_fetched_parents))
                 {
-                    //continue;
+                    continue;
                 }
 
                 // skip if parent is NULL
@@ -781,16 +796,16 @@ abstract class Go_Model extends CI_Model
         {
             foreach($this->_children as $alias=>$child_config)
             {
-                // if children was not loaded, don't load it, just skip
-                if(!in_array($alias, $this->_fetched_children) && $is_old_record)
+                if(!in_array($alias, $this->_fetched_children))
                 {
-                    //continue;
+                    continue;
                 }
 
                 $fk = $child_config['foreign_key'];    
-                // $children = $this->__get($alias);
+
                 $children = $this->_values[$alias];
                 $new_children = array();
+
                 foreach($children as $child)
                 {
                     if($child->_is_deleted())
@@ -801,12 +816,14 @@ abstract class Go_Model extends CI_Model
                     // set foreign key and save
                     $child->_values[$fk] = $pk;
                     $child->_do_save($success, $error_message);
+
                     $new_children[] = $child;
                     if(!$success)
                     {
                         break;
                     }
                 }
+
                 $this->_values[$alias] =& $new_children;
             }
         }
@@ -851,7 +868,7 @@ abstract class Go_Model extends CI_Model
     // soft delete this record
     public function delete()
     {
-        $this->_do_delete();
+        return $this->_do_delete();
     }
 
     // $success and $error_message are passed for every before and after events
@@ -869,7 +886,7 @@ abstract class Go_Model extends CI_Model
 
         if($pk === NULL)
         {
-            return array('success' => FALSE, $error_message = 'Deletion cannot be performed. Primary Key is not defined');
+            return array('success' => FALSE, $error_message = 'Deletion cannot be performed on '.$this->db->dbprefix.$this->_table.'. Primary Key is not defined');
         }
 
         $timestamp = date('Y-m-d H:i:s');
@@ -945,7 +962,7 @@ abstract class Go_Model extends CI_Model
                     foreach($children as &$child)
                     {
                         $success = FALSE;
-                        $error_message = 'Deletion cannot be performed. There is a ' . $alias . ' in database';
+                        $error_message = 'Deletion cannot be performed. Table '.$this->db->dbprefix.$this->_table.' still has ' . $alias;
                         break;
                     }
                 }
@@ -978,7 +995,7 @@ abstract class Go_Model extends CI_Model
 
     public function purge()
     {
-        $this->_do_purge();
+        return $this->_do_purge();
     }
     // $success and $error_message are passed for every before and after events
     // $propagate inform whether it is needed to update parent & children as well
@@ -991,7 +1008,7 @@ abstract class Go_Model extends CI_Model
 
         if($pk === NULL)
         {
-            return array('success' => FALSE, $error_message = 'Purge Deletion cannot be performed. Primary Key is not defined');
+            return array('success' => FALSE, $error_message = 'Purge deletion cannot be performed on '.$this->db->dbprefix.$this->_table.'. Primary Key is not defined');
         }
 
         $timestamp = date('Y-m-d H:i:s');
@@ -1056,7 +1073,7 @@ abstract class Go_Model extends CI_Model
                     foreach($children as &$child)
                     {
                         $success = FALSE;
-                        $error_message = 'Deletion cannot be performed. There is a ' . $alias . ' in database';
+                        $error_message = 'Purge deletion cannot be performed. Table '.$this->db->dbprefix.$this->_table.' still has ' . $alias;
                         break;
                     }
                 }
@@ -1105,7 +1122,21 @@ abstract class Go_Model extends CI_Model
     {
         static::$_cached_result = array();
         static::$_is_cached = FALSE;
+        if(static::$_is_cachable !== FALSE)
+        {
+            static::$_is_cachable = NULL;
+        }
+    }
+
+    public static function turn_on_cache()
+    {
         static::$_is_cachable = NULL;
+    }
+
+    public static function turn_off_cache()
+    {
+        static::delete_cached_result();
+        static::$_is_cachable = FALSE;
     }
 
     public static function get_cached_result(&$db = NULL)
@@ -1119,7 +1150,7 @@ abstract class Go_Model extends CI_Model
         $config = static::_get_static_config();
         $table = $config['table'];
 
-        // is this cachable (assuming count of max cachable table is less than 1000)
+        // is this cachable (assuming count of max cachable table is 1000)
         if(static::$_is_cachable === NULL)
         {
             static::$_is_cachable = $db->count_all($table) <= 1000;
@@ -1252,9 +1283,9 @@ abstract class Go_Model extends CI_Model
 
             // is where only contains simple key=>value, or is the key contains comparison?
             $complex_key = FALSE;
-            foreach($where as $key=>$value)
+            foreach($where as $where_key=>$where_value)
             {
-                if(strpos($key, '>') !== FALSE  || strpos($key, '<') !== FALSE  || strpos($key, '!') !== FALSE || strpos($key, '=') !== FALSE)
+                if(strpos($where_key, '>') !== FALSE  || strpos($where_key, '<') !== FALSE  || strpos($where_key, '!') !== FALSE || strpos($where_key, '=') !== FALSE)
                 {
                     $complex_key = TRUE;
                     break;
@@ -1271,9 +1302,9 @@ abstract class Go_Model extends CI_Model
                     foreach($cached_result as $result)
                     {
                         $passed = TRUE;
-                        foreach($where as $key=>$value)
+                        foreach($where as $where_key=>$where_value)
                         {
-                            if($result[$key] != $value)
+                            if($result[$where_key] != $where_value)
                             {
                                 $passed = FALSE;
                                 continue;

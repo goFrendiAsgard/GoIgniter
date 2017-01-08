@@ -12,6 +12,8 @@ use \Go_Migration;
 use \Module_Migrator;
 use \Modules\Cms\Test_Controller;
 use \Modules\Cms\Mutator;
+use \Modules\Cms\Site_Model;
+use \Modules\Cms\User_Model;
 use \Modules\Cms\Models\Genesis;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -33,6 +35,7 @@ class Full_Test_Node extends \Go_Model
     protected $_deleted_at = 'deleted_at';
     protected $_deleted = 'deleted';
     protected $_columns = ['code', 'parent_id', 'child_count'];
+    protected $_unique_columns = ['code'];
 
     protected $code = 'default';
 
@@ -55,10 +58,6 @@ class Full_Test_Node extends \Go_Model
     protected function before_save(&$success, &$error_message)
     {
         $this->child_count = count($this->children);
-    }
-
-    protected function after_delete(&$success, &$error_message)
-    {
     }
 
 }
@@ -480,13 +479,16 @@ class Test extends Test_Controller
                 array('code' => 'Arya Stark'),
                 array('code' => 'Brandon Stark'),
             ), 
-            'parent' => array('code' => 'Rickard Stark'),
+            'parent' => array('code' => 'Rick Stark'),
         );
 
         // Try to create test_node with hybrid parameters (array & object)
         $obj = $array;
         $obj['children'][0] = new Full_Test_Node($obj['children'][0]);
         $test_node = new Full_Test_Node($obj);
+
+        $jon_snow = $test_node->children[0];
+        $jon_snow->parent->parent->code = 'Rickard Stark';
 
         // test this test_node
         $expected_result = 'Ned Stark';
@@ -514,7 +516,7 @@ class Test extends Test_Controller
         // test as_array
         $expected_result = $array;
         $expected_result['parent_id'] = NULL;
-        //$expected_result['parent']['parent_id'] = NULL;
+        $expected_result['parent']['code'] = 'Rickard Stark';
         for($i=0; $i<5; $i++)
         {
             $expected_result['children'][$i]['parent_id'] = NULL;
@@ -548,7 +550,6 @@ class Test extends Test_Controller
         $created_at = $test_node->created_at;
         $test_created_at = $created_at != NULL;
         $test_deleted = TRUE;
-        $test_equality = TRUE;
         $all_nodes = array_merge(array($test_node, $test_node->parent), $test_node->children); 
         foreach($all_nodes as $node)
         {
@@ -556,17 +557,12 @@ class Test extends Test_Controller
             {
                 $test_created_at = FALSE;
             }
-            if($node->created_at != $created_at)
-            {
-                $test_equality = FALSE;
-            }
             if($node->deleted == TRUE)
             {
                 $test_deleted = FALSE;
             }
         }
         $this->unit->run($test_created_at, $expected_result, 'Every node\'s created_at should not be NULL');
-        $this->unit->run($test_equality, $expected_result, 'Every node\'s created_at should be equal');
         $this->unit->run($test_deleted, $expected_result, 'Every node\'s deleted should not be FALSE');
 
         // delete
@@ -608,7 +604,7 @@ class Test extends Test_Controller
         $test = $ned->parent->code;
         $this->unit->run($test, $expected_result, '$ned->parent->code; should give you Rickard Stark');
 
-        // get parent
+        // get children
         $expected_result = 4;
         $test = count($ned->children);
         $this->unit->run($test, $expected_result, 'count($ned->children); should give you 4');
@@ -653,6 +649,15 @@ class Test extends Test_Controller
         $test = $this->db->count_all('test_node');
         $expected_result = 7;
         $this->unit->run($test, $expected_result, 'add Edwyle Stark');
+
+        // Test add duplicate unique code
+        $other_ned = new Full_Test_Node(array('code' => 'Ned Stark'));
+        $save_result = $other_ned->save();
+        $notes = var_export($save_result, TRUE);
+
+        $expected_result = FALSE;
+        $test = $save_result['success'];
+        $this->unit->run($test, $expected_result, '$other_ned->save(); should return array which success key if FALSE', $notes);
     }
 
 
@@ -664,7 +669,8 @@ class Test extends Test_Controller
 
         $expected_result = 'Rickard Stark';
         $test = $test_node->code;
-        $this->unit->run($test, $expected_result, 'Test_Node::find_by_id(1) should give Rickard Stark');
+        $notes = var_export($db->get('test_node')->result(), TRUE);
+        $this->unit->run($test, $expected_result, 'Test_Node::find_by_id(1) should give Rickard Stark', $notes);
 
     }
 
@@ -711,6 +717,32 @@ class Test extends Test_Controller
 
         $test = $go_migration->TYPE_PRIMARYKEY;
         $this->unit->run($test, $expected_result, '$go_migration->TYPE_PRIMARYKEY should return the correct type');
+    }
+
+    function test_user_model()
+    {
+        $user = new User_Model(array('user_name' => 'Tono', 'email' => 'email@email.com'));
+        $user->password = 'password';
+        $user->save();
+    }
+
+    function test_site_model()
+    {
+        // delete all site
+        $core_site = new Site();
+        foreach($core_site->get_available_site_codes() as $code)
+        {
+            $core_site->delete_site($code);
+        }
+
+        // try use site_model
+        $site = new Site_Model(array(
+            'code' => 'alpha',
+            'aliases' => array(
+                array('alias' => 'alpha.com')
+            ),
+        ));
+        //$site->save();
     }
 
 }

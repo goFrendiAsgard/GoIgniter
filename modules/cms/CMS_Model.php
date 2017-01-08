@@ -13,7 +13,8 @@ abstract class CMS_Model extends Go_Model
 
     public function __construct($obj=array(), $db = NULL)
     {
-        $allowed_columns = parent::_set_allowed_columns();
+        parent::__construct($obj, $db);
+
         foreach(array($this->_created_by, $this->_updated_by, $this->_deleted_by, $this->_site_id) as $column)
         {
             if($column != '')
@@ -28,21 +29,21 @@ abstract class CMS_Model extends Go_Model
             {
                 $this->_parents['creator'] = array(
                     'model' => $this->_user_model,
-                    'foreign_key' = $this->_created_by,
+                    'foreign_key' => $this->_created_by,
                 );
             }
             if($this->_updated_by != '')
             {
                 $this->_parents['updater'] = array(
                     'model' => $this->_user_model,
-                    'foreign_key' = $this->_updated_by,
+                    'foreign_key' => $this->_updated_by,
                 );
             }
             if($this->_deleted_by != '')
             {
                 $this->_parents['deleter'] = array(
                     'model' => $this->_user_model,
-                    'foreign_key' = $this->_deleted_by,
+                    'foreign_key' => $this->_deleted_by,
                 );
             }
         }
@@ -52,10 +53,11 @@ abstract class CMS_Model extends Go_Model
             $this->_parents['site'] = array(
                 'model' => $this->_site_model,
                 'foreign_key' => $this->_site_id,
-            )
+            );
         }
 
-        parent::__construct($obj, $db);
+        $allowed_columns = parent::_set_allowed_columns();
+
     }
 
     protected function _add_default_site()
@@ -76,7 +78,7 @@ abstract class CMS_Model extends Go_Model
         {
             if($this->__get('creator') === NULL)
             {
-                $current_user =& $this->_user_model::get_current_user();
+                $current_user = $this->_user_model::get_current_user();
                 $this->__set('creator', $current_user);
             }
         }
@@ -89,7 +91,7 @@ abstract class CMS_Model extends Go_Model
         {
             if($this->__get('updater') === NULL)
             {
-                $current_user =& $this->_user_model::get_current_user();
+                $current_user = $this->_user_model::get_current_user();
                 $this->__set('updater', $current_user);
             }
         }
@@ -120,7 +122,7 @@ abstract class CMS_Model extends Go_Model
         return $config;
     }
 
-    public static find_by_current_site()
+    public static function find_by_current_site()
     {
         $config = static::_get_static_config();
         if($config['site_id'] != '' && $config['site_model'] != '')

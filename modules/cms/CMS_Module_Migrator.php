@@ -2,7 +2,7 @@
 namespace Modules\Cms;
 use \Module_Migrator as Core_Migrator;
 
-class Module_Migrator extends Core_Migrator
+class CMS_Module_Migrator extends Core_Migrator
 {
 
     // TODO: we can only complete this after Model & Entity is ready

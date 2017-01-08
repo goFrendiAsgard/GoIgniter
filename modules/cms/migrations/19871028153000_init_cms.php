@@ -1,6 +1,7 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
+use \Modules\Cms\CMS_Migration;
 
-class Migration_Init_cms extends Go_Migration {
+class Migration_Init_cms extends CMS_Migration {
 
     public function up()
     {
@@ -14,39 +15,36 @@ class Migration_Init_cms extends Go_Migration {
         $this->create_table('test_node');
 
         // Create module
-        $this->add_default_fields();
+        $this->add_cms_default_fields();
         $this->add_field(array(
             'code'      => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_module');
 
         // Create site
-        $this->add_default_fields();
+        $this->add_cms_default_fields();
         $this->add_field(array(
             'code'      => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_site');
 
         // Create site_alias
-        $this->add_default_fields();
+        $this->add_cms_default_fields();
         $this->add_field(array(
-            'site_id'   => $this->TYPE_FOREIGN_KEY,
             'alias'     => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_site_alias');
 
         // Create site_module
-        $this->add_default_fields();
+        $this->add_cms_general_default_fields();
         $this->add_field(array(
-            'site_id'   => $this->TYPE_FOREIGN_KEY,
             'module_id' => $this->TYPE_FOREIGN_KEY,
         ));
         $this->create_table('cms_site_module');
 
         // Create config
-        $this->add_default_fields();
+        $this->add_cms_default_fields();
         $this->add_field(array(
-            'site_id'       => $this->TYPE_FOREIGN_KEY,
             'module_id'     => $this->TYPE_FOREIGN_KEY,
             'type'          => $this->TYPE_VARCHAR_255,
             'key'           => $this->TYPE_VARCHAR_255,
@@ -56,18 +54,16 @@ class Migration_Init_cms extends Go_Migration {
         $this->create_table('cms_config');
 
         // Create group
-        $this->add_default_fields();
+        $this->add_cms_default_fields();
         $this->add_field(array(
-            'site_id'       => $this->TYPE_FOREIGN_KEY,
             'module_id'     => $this->TYPE_FOREIGN_KEY,
             'group_name'    => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_group');
 
         // Create user
-        $this->add_default_fields();
+        $this->add_cms_general_default_fields();
         $this->add_field(array(
-            'site_id'           => $this->TYPE_FOREIGN_KEY,
             'user_name'         => $this->TYPE_VARCHAR_255,
             'hashed_password'   => $this->TYPE_VARCHAR_255,
             'email'             => $this->TYPE_VARCHAR_255,

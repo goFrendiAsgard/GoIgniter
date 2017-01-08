@@ -80,7 +80,11 @@
                 <tr>
                     <td>{{ i }}</td>
                     <td>{{ query.time | round(4) }}</td>
-                    <td>{{ query.sql | nl2br }}</td>
+                    <td>
+                        <code>
+                            {{ query.sql | raw | replace({'  ' : ' &nbsp;', '\t' : '&nbsp;&nbsp;&nbsp;&nbsp;', '\n' : '<br />' }) | raw }}
+                        </code>
+                    </td>
                 </tr>
                 {% set i= i+1 %}
             {% endfor %}
@@ -97,16 +101,23 @@
             <th>Test</th>
             <th>Expected</th>
             <th>Result</th>
-            <th>Notes</th>
         </tr>' %}
         {% for row in tests %}
             {% if row.header != '' %}
-                <tr><th class="separator" colspan="7">{{ row.header }}</th></tr>
+                <tr><th class="separator" colspan="6">{{ row.header }}</th></tr>
                 {{ header | raw }}
             {% endif %}
             <tr>
-                <td>{{ i }}
-                <td>{{ row.test_name }}</td>
+                <td>{{ i }}</td>
+                <td>
+                    {{ row.test_name }}
+                    {% if row.notes != '' %}
+                        <br /><br /><b>Notes : </b><br />
+                        <code>
+                            {{ row.notes | raw | replace({'  ' : ' &nbsp;', '\t' : '&nbsp;&nbsp;&nbsp;&nbsp;', '\n' : '<br />' }) | raw }}
+                        </code>
+                    {% endif %}
+                </td>
                 <td><code>{{ row.file }} : {{ row.line }}</code></td>
                 <td><b>{{ row.test_datatype }}</b> <code>{{ row.test }}</code></td>
                 <td><b>{{ row.res_datatype }}</b> <code>{{ row.expected }}</code></td>
@@ -116,7 +127,6 @@
                     {% endif %}
                     {{ row.result }}
                 </td>
-                <td>{{ row.notes|nl2br }}</td>
             </tr>
             {% set i = i+1 %}
         {% endfor %}
