@@ -39,9 +39,9 @@ Personally, I made this as core foundation of No-CMS 2.0
 If you use GoIgniter in production, please create `application/core/config/config.php` and set `$config['hostname']` to your `hostname`. e.g:
 
 ```php
-<?php
-$config['hostname'] = 'somedomain.com';
-// or $config['hostname'] = 'localhost';
+    <?php
+    $config['hostname'] = 'somedomain.com';
+    // or $config['hostname'] = 'localhost';
 ```
 
 This is important to avoid `host header injection` attacks. 
@@ -142,21 +142,21 @@ Too much changes? Don't worry, try to put any model, view, and controller in you
 That's cool, but you will see something cooler in the `view`.
 
 ```php 
-<!-- file location: modules/test/views/MyView.php -->
-<h1>Hello world</h1>
-<h2><?=$date?></h2>
-<?php 
-foreach($articles as $article){
-    echo '<h4>' . $article['title'] . '</h4>';
-    echo $article['content'];
-}
+    <!-- file location: modules/test/views/MyView.php -->
+    <h1>Hello world</h1>
+    <h2><?=$date?></h2>
+    <?php 
+    foreach($articles as $article){
+        echo '<h4>' . $article['title'] . '</h4>';
+        echo $article['content'];
+    }
 
-echo '<pre>';
-run_module_controller('test/mycontroller/harambe/run?food=banana');
-echo '</pre>';
+    echo '<pre>';
+    run_module_controller('test/mycontroller/harambe/run?food=banana');
+    echo '</pre>';
 
-var_dump($_GET)
-?>
+    var_dump($_GET)
+    ?>
 ```
 
 Yes, you have `run_module_controller` function, that can be called anywhere!!!
@@ -270,12 +270,12 @@ The ORM in GoIgniter is much simpler compared to Laravel's and much more powerfu
 Here is a simple model:
 
 ```php
-<?php // file location: modules/cms/models/Test_Node.php
-namespace Modules\Cms\Models;
+    <?php // file location: modules/cms/models/Test_Node.php
+    namespace Modules\Cms\Models;
 
-class Test_Node extends \Go_Model
-{
-}
+    class Test_Node extends \Go_Model
+    {
+    }
 ```
 
 While you make a Model like this, GoIgniter will try to guess table name based on class name.
@@ -284,105 +284,149 @@ It will also try to fill out other configuration automatically.
 But let's make a full featured model for now:
 
 ```php
-<?php // file location: modules/cms/models/Test_Node.php
-namespace Modules\Cms\Models;
+    <?php // file location: modules/cms/models/Test_Node.php
+    namespace Modules\Cms\Models;
 
-class Test_Node extends \Go_Model
-{
-    protected $_table = 'test_node';        // Table's name
-    protected $_id = 'id';                  // Primary key
-    protected $_created_at = 'created_at';  // field for creation date logging
-    protected $_updated_at = 'updated_at';  // field for update date logging
-    protected $_deleted_at = 'deleted_at';  // field for "soft deletion" logging
-    protected $_deleted = 'deleted';        // field for "soft deletion" flag
-    protected $_columns = ['code', 'parent_id', 'child_count']; // Other fields
-
-    protected $code = 'default'; // property that represent field's default value
-
-    protected $_children = array( // children of this table (i.e: one-to-many relation)
-        'children' => array(
-            'model' => 'Modules\Cms\Models\Test_Node',
-            'foreign_key' => 'parent_id',
-            'on_delete' => 'set_null', // restrict, cascade, set_null
-            'on_purge' => 'set_null', // restric, cascade, set_null
-        ),
-    );
-
-    protected $_parents = array( // parent of this table (i.e: many-to-one relation)
-        'parent' => array(
-            'model' => 'Modules\Cms\Models\Test_Node',
-            'foreign_key' => 'parent_id',
-        ),
-    );
-
-    protected function before_save(&$success, &$error_message) // what should we do before save
+    class Test_Node extends \Go_Model
     {
-        $this->child_count = count($this->children);
+        protected $_table = 'test_node';        // Table's name
+        protected $_id = 'id';                  // Primary key
+        protected $_created_at = 'created_at';  // field for creation date logging
+        protected $_updated_at = 'updated_at';  // field for update date logging
+        protected $_deleted_at = 'deleted_at';  // field for "soft deletion" logging
+        protected $_deleted = 'deleted';        // field for "soft deletion" flag
+        protected $_columns = ['code', 'parent_id', 'child_count']; // Other fields
+
+        protected $code = 'default'; // property that represent field's default value
+
+        protected $_children = array( // children of this table (i.e: one-to-many relation)
+            'children' => array(
+                'model' => 'Modules\Cms\Models\Test_Node',
+                'foreign_key' => 'parent_id',
+                'on_delete' => 'set_null', // restrict, cascade, set_null
+                'on_purge' => 'set_null', // restric, cascade, set_null
+            ),
+        );
+
+        protected $_parents = array( // parent of this table (i.e: many-to-one relation)
+            'parent' => array(
+                'model' => 'Modules\Cms\Models\Test_Node',
+                'foreign_key' => 'parent_id',
+            ),
+        );
+
+        protected function before_save(&$success, &$error_message) // what should we do before save
+        {
+            $this->child_count = count($this->children);
+        }
     }
-}
 ```
 
 And here is how to use it:
 
 ```php
-<?php // file location: modules/cms/controllers/Test.php
-namespace Modules\Cms\Controllers;
+    <?php // file location: modules/cms/controllers/Test.php
+    namespace Modules\Cms\Controllers;
 
-class Test extends CI_Controller
-{
-    public function index()
+    class Test extends CI_Controller
     {
-       $array = array(
-            'code' => 'Ned Stark',
-            'children' => array(
-                array('code' => 'Robb Stark'),
-                array('code' => 'Jon Snow'),
-                array('code' => 'Sansa Stark'),
-                array('code' => 'Arya Stark'),
-                array('code' => 'Brandon Stark'),
-            ), 
-            'parent' => array('code' => 'Rickard Stark'),
-        );
+        public function index()
+        {
+           $array = array(
+                'code' => 'Ned Stark',
+                'children' => array(
+                    array('code' => 'Robb Stark'),
+                    array('code' => 'Jon Snow'),
+                    array('code' => 'Sansa Stark'),
+                    array('code' => 'Arya Stark'),
+                    array('code' => 'Brandon Stark'),
+                ), 
+                'parent' => array('code' => 'Rickard Stark'),
+            );
 
-        // Creating a new test_node
-        $test_node = new Test_Node($array);
+            // Creating a new test_node
+            $test_node = new Test_Node($array);
 
-        // save it
-        $test_node->save();
+            // save it
+            $test_node->save();
 
-        // test how many records available in the database
-        var_dump($this->db->count_all('test_node')); // should be 7
+            // test how many records available in the database
+            var_dump($this->db->count_all('test_node')); // should be 7
 
-        // delete Robb
-        $test_node->children[0]->delete();
+            // delete Robb
+            $test_node->children[0]->delete();
 
-        // purge Robb (delete Robb forever)
-        $test_node->children[0]->purge();
+            // purge Robb (delete Robb forever)
+            $test_node->children[0]->purge();
 
-        // test how many records available in the database
-        var_dump($this->db->count_all('test_node')); // should be 6, Robb is gone
+            // test how many records available in the database
+            var_dump($this->db->count_all('test_node')); // should be 6, Robb is gone
 
-        // Get Node by id
-        $rickard = Test_Node::find_by_id(1);
-        var_dump($rickard->code); // should be Rickard Stark
-        var_dump($rickard->child_count); // should be 1
+            // Get Node by id
+            $rickard = Test_Node::find_by_id(1);
+            var_dump($rickard->code); // should be Rickard Stark
+            var_dump($rickard->child_count); // should be 1
 
-        // Get all node
-        $node_list = Test_Node::find_all();
-        var_dump(count($node_list)); // should be 6
+            // Get all node
+            $node_list = Test_Node::find_all();
+            var_dump(count($node_list)); // should be 6
 
-        // ORM is cool, but I want to try query
-        $node_list = Test_Node::find_by_query("SELECT * FROM test_node WHERE code LIKE '%snow%'")
-        var_dump($node_list[0]->code); // And yeah, Jon Snow
+            // ORM is cool, but I want to try query
+            $node_list = Test_Node::find_by_query("SELECT * FROM test_node WHERE code LIKE '%snow%'")
+            var_dump($node_list[0]->code); // And yeah, Jon Snow
 
-        // Note: This will also work
-        // $node_list = Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
+            // Note: This will also work
+            // $node_list = Test_Node::find_by_query($this->db->select('*')->from('test_node')->like('code', 'snow'));
 
+        }
     }
-}
 ```
 
 In my opinion, this is how ORM should be implemented. No hasMany, belongsTo, and whatever hard-to-memorize keywords.
+
+# ORM Magic
+
+Like in Laravel's Eloquent, Go_Model also allows you to define your own magical setter and getter easily.
+Let's see this example
+
+```php
+    <?php
+    class User_Model extends Go_Model 
+    {
+        protected $_table      = 'cms_user';
+        protected $_columns    = ['user_name', 'hashed_password', 'email'];
+        protected $_unique_columns = ['user_name'];
+
+        public function set_password($val)
+        {
+            $this->hashed_password = md5($val);
+        }
+
+        public function get_password()
+        {
+            return $this->hashed_password != ''? 'PASSWORD SET' : 'PASSWORD NOT SET';
+        }
+    }
+````
+
+You can use the model like this:
+
+```php
+    <?php
+
+    $user = new User_Model(array(
+        'user_name' => 'Kira Yamato',
+        'password' => 'kira',
+        'email' => 'kira@junioseven.com',
+    ));
+    $user->save();
+
+    $user = User_Model::find_by_id(1);
+    $user->password = 'new password';
+    $user->save();
+
+    var_dump($user->password); // should give you 'PASSWORD SET'
+```
 
 
 # Always loaded functions

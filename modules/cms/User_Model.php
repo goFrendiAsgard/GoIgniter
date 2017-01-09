@@ -10,16 +10,9 @@ class User_Model extends CMS_Model
     protected $_columns    = ['user_name', 'hashed_password', 'email'];
     protected $_unique_columns = ['user_name'];
 
-    public function __set($key, $val)
+    public function set_password($val)
     {
-        if($key == 'password')
-        {
-            parent::__set('hashed_password', User_Model::hash($val));
-        }
-        else
-        {
-            parent::__set($key, $val);
-        }
+        $this->hashed_password = User_Model::hash($val);
     }
 
     public static function get_current_user()

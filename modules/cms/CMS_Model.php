@@ -82,7 +82,7 @@ abstract class CMS_Model extends Go_Model
                 $this->__set('creator', $current_user);
             }
         }
-        $this->_add_default_site;
+        $this->_add_default_site();
     }
 
     public function before_update(&$success, &$message)
@@ -95,7 +95,7 @@ abstract class CMS_Model extends Go_Model
                 $this->__set('updater', $current_user);
             }
         }
-        $this->_add_default_site;
+        $this->_add_default_site();
     }
 
     public function before_delete(&$success, &$message)
@@ -144,4 +144,5 @@ abstract class CMS_Model extends Go_Model
 
         return static::find_all();
     }
+
 }

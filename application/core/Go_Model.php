@@ -115,7 +115,11 @@ abstract class Go_Model extends CI_Model
 
     public function __get($key)
     {
-        if(in_array($key, $this->_allowed_columns))
+        if(method_exists($this, 'get_'.$key))
+        {
+            call_user_func_array(array($this, 'get_'.$key), array());
+        }
+        else if(in_array($key, $this->_allowed_columns))
         {
             // fetch parent & children is expensive, don't do it if not necessary
             if(array_key_exists($key, $this->_parents) && !in_array($key, $this->_fetched_parents))
@@ -293,7 +297,12 @@ abstract class Go_Model extends CI_Model
 
     public function __set($key, $val)
     {
-        if(in_array($key, $this->_allowed_columns))
+        
+        if(method_exists($this, 'set_'.$key))
+        {
+            call_user_func_array(array($this, 'set_'.$key), array($val));
+        }
+        else if(in_array($key, $this->_allowed_columns))
         {
             // don't do anything if nothing changed
             if(array_key_exists($key, $this->_values) && $this->_values[$key] == $val)
@@ -1111,37 +1120,40 @@ abstract class Go_Model extends CI_Model
     ////////////////////////////////////////////////////////////////
 
     // all static configurations should live here
-    protected static $_configs;
+    protected static $_configs = array();
 
     // cache SELECT * FROM table
-    protected static $_cached_result;
-    protected static $_is_cachable; // is cached_result allowed (i.e: record in the table less than 1000)
-    protected static $_is_cached; // is cached_result has been cached?
+    protected static $_cached_result = array();
+    protected static $_is_cachable = array(); // is cached_result allowed (i.e: record in the table less than 1000)
+    protected static $_is_cached = array(); // is cached_result has been cached?
 
     public static function delete_cached_result()
     {
-        static::$_cached_result = array();
-        static::$_is_cached = FALSE;
-        if(static::$_is_cachable !== FALSE)
+        $class = get_called_class();
+        self::$_cached_result[$class] = array();
+        self::$_is_cached[$class] = FALSE;
+        if(self::$_is_cachable[$class] !== FALSE)
         {
-            static::$_is_cachable = NULL;
+            self::$_is_cachable[$class] = NULL;
         }
     }
 
     public static function turn_on_cache()
     {
-        static::$_is_cachable = NULL;
+        $class = get_called_class();
+        self::$_is_cachable[$class] = NULL;
     }
 
     public static function turn_off_cache()
     {
+        $class = get_called_class();
         static::delete_cached_result();
-        static::$_is_cachable = FALSE;
+        self::$_is_cachable[$class] = FALSE;
     }
 
     public static function get_cached_result(&$db = NULL)
     {
-
+        $class = get_called_class();
         if($db == NULL)
         {
             $CI =& get_instance();
@@ -1151,26 +1163,26 @@ abstract class Go_Model extends CI_Model
         $table = $config['table'];
 
         // is this cachable (assuming count of max cachable table is 1000)
-        if(static::$_is_cachable === NULL)
+        if(!array_key_exists($class, self::$_is_cachable) || self::$_is_cachable[$class] === NULL)
         {
-            static::$_is_cachable = $db->count_all($table) <= 1000;
+            self::$_is_cachable[$class] = $db->count_all($table) <= 1000;
         }
 
-        if(static::$_is_cachable)
+        if(self::$_is_cachable[$class])
         {
             // cache it
-            if(static::$_is_cached === NULL || static::$_is_cached === FALSE)
+            if(!array_key_exists($class, self::$_is_cached) || self::$_is_cached[$class] === NULL || self::$_is_cached[$class] === FALSE)
             {
-                static::$_cached_result = $db->get($table)->result_array();
-                static::$_is_cached = TRUE;
+                self::$_cached_result[$class] = $db->get($table)->result_array();
+                self::$_is_cached[$class] = TRUE;
             }
 
-            return static::$_cached_result;
+            return self::$_cached_result[$class];
         }
         return NULL;
     }
 
-    protected static function _get_static_config()
+    public static function _get_static_config()
     {
         $class = get_called_class();
 

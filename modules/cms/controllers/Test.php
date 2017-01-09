@@ -721,8 +721,11 @@ class Test extends Test_Controller
 
     function test_user_model()
     {
-        $user = new User_Model(array('user_name' => 'Tono', 'email' => 'email@email.com'));
-        $user->password = 'password';
+        $user = new User_Model(array(
+            'user_name' => 'Tono', 
+            'email' => 'email@email.com',
+            'password' => 'password',
+        ));
         $user->save();
     }
 
