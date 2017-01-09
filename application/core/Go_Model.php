@@ -16,6 +16,7 @@ abstract class Go_Model extends CI_Model
     protected $_deleted         = 'deleted';
     protected $_columns         = array();
     protected $_unique_columns  = array();
+    protected $_turn_off_cache  = FALSE;
     
     // array of associative array. Each child should has these keys:
     // "model", "foreign_key", "on_delete", and "on_purge".
@@ -239,20 +240,23 @@ abstract class Go_Model extends CI_Model
 
         // look for parent's children configuration refering to this model
         $backref_relation_name = $this->_get_backref_relation($relation_name);
+
         if($backref_relation_name != NULL)
         {
             $parent_config = $parent->_get_config();
             $parent_children = $parent->_values[$backref_relation_name];
+
             // if is exists don't need to do anything. This is also the recursive breaker
             if(!in_array($this, $parent_children))
             {
                 $parent->_values[$backref_relation_name][] =& $this;
 
-                // parent should also consider this record as "fetched"
-                if(!in_array($backref_relation_name, $parent->_fetched_children))
-                {
-                    $parent->_fetched_children[] = $backref_relation_name;
-                }
+            }
+
+            // parent should also consider this record as "fetched"
+            if(!in_array($backref_relation_name, $parent->_fetched_children))
+            {
+                $parent->_fetched_children[] = $backref_relation_name;
             }
         }
 
@@ -314,6 +318,7 @@ abstract class Go_Model extends CI_Model
             $this->_modified = TRUE;
 
             $current_pk = $this->_get_id();
+            $current_class_name = get_called_class();
 
             // children 
             if(array_key_exists($key, $this->_children))
@@ -329,7 +334,7 @@ abstract class Go_Model extends CI_Model
                 $true_config_found = FALSE;
                 foreach($child_parent_config as $alias=>$config)
                 {
-                    if($config['model'] == $class_name && $config['foreign_key'] == $foreign_key)
+                    if(trim($config['model'], '\\') == trim($current_class_name, '\\') && $config['foreign_key'] == $foreign_key)
                     {
                         foreach($val as $child_data)
                         {
@@ -339,11 +344,13 @@ abstract class Go_Model extends CI_Model
                                 $new_child->_set_parent($alias, $this);
                             }
                         }
+
                         $true_config_found = TRUE;
                         break;
                     }
                 }
 
+                // Fallback
                 if(!$true_config_found)
                 {
                     foreach($val as $child_data)
@@ -353,6 +360,12 @@ abstract class Go_Model extends CI_Model
                         {
                             $this->_values[$key][] = $new_child;
                         }
+                    }
+
+                    // set _fetched children if it is not there
+                    if(!in_array($key, $this->_fetched_children))
+                    {
+                        $this->_fetched_children[] = $key;
                     }
                 }
             }
@@ -406,7 +419,7 @@ abstract class Go_Model extends CI_Model
             $backref_children = $backref_config['children'];
             foreach($backref_children as $backref_relation=>$backref_child_config)
             {
-                if($backref_child_config['model'] == get_called_class() && $backref_child_config['foreign_key'] == $config['foreign_key'])
+                if(trim($backref_child_config['model'], '\\') == get_called_class() && $backref_child_config['foreign_key'] == $config['foreign_key'])
                 {
                     return $backref_relation;
                 }
@@ -420,7 +433,7 @@ abstract class Go_Model extends CI_Model
             $backref_parents = $backref_config['parents'];
             foreach($backref_parents as $backref_relation=>$backref_parent_config)
             {
-                if($backref_parent_config['model'] == get_called_class() && $backref_parent_config['foreign_key'] == $config['foreign_key'])
+                if(trim($backref_parent_config['model'], '\\') == get_called_class() && $backref_parent_config['foreign_key'] == $config['foreign_key'])
                 {
                     return $backref_relation;
                 }
@@ -540,6 +553,7 @@ abstract class Go_Model extends CI_Model
     public function __construct($obj=array(), $db = NULL)
     {
         parent::__construct();
+
         // database
         if($db != NULL)
         {
@@ -577,7 +591,12 @@ abstract class Go_Model extends CI_Model
         {
             $this->__set($key, $val);
         }
-        
+
+        // turn off cache if not necessary
+        if($this->_turn_off_cache){
+            $class = get_called_class(); 
+            $class::turn_off_cache();
+        }
     }
 
     // return array representation of $this->_values
@@ -725,9 +744,8 @@ abstract class Go_Model extends CI_Model
 
                 // skip if parent is NULL
                 $parent =& $this->_values[$alias];
-                if($parent == NULL || $parent->_is_deleted()){ continue; }
+                if($parent == NULL || $parent->_is_deleted() || !$parent->_modified){ continue; }
 
-                // get foreign key and save
                 $parent->_do_save($success, $error_message);
                 if(!$success)
                 {
@@ -752,7 +770,6 @@ abstract class Go_Model extends CI_Model
 
                 // something is going to changed, delete cached_result
                 $class = get_called_class();
-                $class::delete_cached_result();
 
                 // if is_old_record, then update, otherwise insert. Add timestamp as needed
                 if($is_old_record)
@@ -790,8 +807,18 @@ abstract class Go_Model extends CI_Model
                     $error = $this->db->error();
                     $error_message = $error['message'];
 
-                    $pk = $this->db->insert_id();
-                    $this->_values[$pk_field] = $pk;
+                    if($success)
+                    {
+                        $pk = $this->db->insert_id();
+                        $this->_values[$pk_field] = $pk;
+                        $simple_array[$pk_field] = $pk;
+                    }
+                }
+
+                // override cached record
+                if($success)
+                {
+                    $class::override_cached_record($simple_array);
                 }
 
                 // set modified flag to FALSE
@@ -810,17 +837,15 @@ abstract class Go_Model extends CI_Model
                     continue;
                 }
 
-                $fk = $child_config['foreign_key'];    
+                // get foreign_key in child
+                $fk = $child_config['foreign_key'];
 
                 $children = $this->_values[$alias];
                 $new_children = array();
 
                 foreach($children as $child)
                 {
-                    if($child->_is_deleted())
-                    {
-                        continue;
-                    }
+                    if($child == NULL || $child->_is_deleted() || !$child->_modified){ continue; }
 
                     // set foreign key and save
                     $child->_values[$fk] = $pk;
@@ -909,7 +934,6 @@ abstract class Go_Model extends CI_Model
         {
             // something is going to changed, delete cached_result
             $class = get_called_class();
-            $class::delete_cached_result();
 
             // Don't need to change anything else 
             $simple_array = array();
@@ -933,6 +957,14 @@ abstract class Go_Model extends CI_Model
             foreach($this->_parents as $alias=>$config)
             {
                 $this->_unset_parent($alias);
+                $simple_array[$alias] = NULL;
+            }
+
+            // override cached record
+            if($success)
+            {
+                $simple_array[$pk_field] = $pk;
+                $class::override_cached_record($simple_array);
             }
         }
 
@@ -1031,7 +1063,6 @@ abstract class Go_Model extends CI_Model
         {
             // something is going to changed, delete cached_result
             $class = get_called_class();
-            $class::delete_cached_result();
 
             // get data
             $simple_array = $this->as_array(TRUE);
@@ -1044,6 +1075,14 @@ abstract class Go_Model extends CI_Model
             foreach($this->_parents as $alias=>$config)
             {
                 $this->_unset_parent($alias);
+                $simple_array[$alias] = NULL;
+            }
+
+            // override cached record
+            if($success)
+            {
+                $simple_array[$pk_field] = $pk;
+                $class::override_cached_record($simple_array);
             }
         }
 
@@ -1127,33 +1166,140 @@ abstract class Go_Model extends CI_Model
     protected static $_is_cachable = array(); // is cached_result allowed (i.e: record in the table less than 1000)
     protected static $_is_cached = array(); // is cached_result has been cached?
 
-    public static function delete_cached_result()
+    protected static function _activate_cache()
     {
         $class = get_called_class();
+
+        // cached_result
+        if(!array_key_exists($class, self::$_cached_result))
+        {
+            self::$_cached_result[$class] = array();
+        }
+
+        // is_cached
+        if(!array_key_exists($class, self::$_is_cached))
+        {
+            self::$_is_cached[$class] = FALSE;
+        }
+
+        // is_cachable
+        if(!array_key_exists($class, self::$_is_cachable))
+        {
+            self::$_is_cachable[$class] = NULL;
+        }
+
+    }
+
+    public static function reset_cache()
+    {
+        static::_activate_cache();
+        $class = get_called_class();
+
         self::$_cached_result[$class] = array();
         self::$_is_cached[$class] = FALSE;
-        if(self::$_is_cachable[$class] !== FALSE)
+        if(!array_key_exists($class, self::$_is_cachable) || self::$_is_cachable[$class] !== FALSE)
         {
             self::$_is_cachable[$class] = NULL;
         }
     }
 
+    public static function override_cached_record($new_record)
+    {
+        static::_activate_cache();
+        $class = get_called_class();
+
+        if(array_key_exists($class, self::$_is_cached) && array_key_exists($class, self::$_is_cachable) && self::$_is_cached[$class] && self::$_is_cachable[$class] === TRUE)
+        {
+            $config = static::_get_static_config();
+            $id_key = $config['id'];
+
+            // is record with the same id exists?
+            $found = FALSE;
+            foreach(self::$_cached_result[$class] as &$record)
+            {
+                if($record[$id_key] == $new_record[$id_key])
+                {
+                    // found it, update and done...
+                    foreach($new_record as $key=>$val)
+                    {
+                        $record[$key] = $val;
+                    }
+                    $found = TRUE;
+                    break;
+                }
+            }
+
+            // Not found, then the new record should be inserted
+            if(!$found)
+            {
+                $columns = $config['columns'];
+                foreach($columns as $column)
+                {
+                    if(!array_key_exists($column, $new_record))
+                    {
+                        $new_record[$column] = NULL;
+                    }
+                }
+                self::$_cached_result[$class][] = $new_record;
+            }
+        }
+    }
+
+    public static function purge_cached_record($old_id)
+    {
+        static::_activate_cache();
+        $class = get_called_class();
+
+        if(array_key_exists($class, self::$_is_cached) && array_key_exists($class, self::$_is_cachable) && self::$_is_cached[$class] && self::$_is_cachable[$class] === TRUE)
+        {
+            $config = static::_get_static_config();
+            $id_key = $config['id'];
+            for($i=0; $i<count(self::$_cached_result[$class]); $i++)
+            {
+                $record = self::$_cached_result[$class][$i];
+                if($record[$id_key] == $old_id)
+                {
+                    array_splice(self::$_cached_result[$class], $i, 1);
+                    break;
+                }
+            }
+        }
+    }
+
     public static function turn_on_cache()
     {
+        static::_activate_cache();
         $class = get_called_class();
+
         self::$_is_cachable[$class] = NULL;
     }
 
     public static function turn_off_cache()
     {
+        static::_activate_cache();
         $class = get_called_class();
-        static::delete_cached_result();
+
+        static::reset_cache();
         self::$_is_cachable[$class] = FALSE;
     }
 
     public static function get_cached_result(&$db = NULL)
     {
+        static::_activate_cache();
         $class = get_called_class();
+
+        // if cache is not allowed
+        if(self::$_is_cachable[$class] === FALSE)
+        {
+            return NULL;
+        }
+
+        // cache already exists? return it
+        if(self::$_is_cached[$class])
+        {
+            return self::$_cached_result[$class];
+        }
+
         if($db == NULL)
         {
             $CI =& get_instance();
@@ -1163,7 +1309,7 @@ abstract class Go_Model extends CI_Model
         $table = $config['table'];
 
         // is this cachable (assuming count of max cachable table is 1000)
-        if(!array_key_exists($class, self::$_is_cachable) || self::$_is_cachable[$class] === NULL)
+        if(self::$_is_cachable[$class] === NULL)
         {
             self::$_is_cachable[$class] = $db->count_all($table) <= 1000;
         }
@@ -1171,12 +1317,9 @@ abstract class Go_Model extends CI_Model
         if(self::$_is_cachable[$class])
         {
             // cache it
-            if(!array_key_exists($class, self::$_is_cached) || self::$_is_cached[$class] === NULL || self::$_is_cached[$class] === FALSE)
-            {
-                self::$_cached_result[$class] = $db->get($table)->result_array();
-                self::$_is_cached[$class] = TRUE;
-            }
-
+            self::$_cached_result[$class] = $db->get($table)->result_array();
+            self::$_is_cached[$class] = TRUE;
+            // return the cache
             return self::$_cached_result[$class];
         }
         return NULL;
@@ -1308,7 +1451,7 @@ abstract class Go_Model extends CI_Model
             if(!$complex_key)
             {
                 $cached_result = static::get_cached_result($db);
-                if($cached_result != NULL)
+                if($cached_result !== NULL)
                 {
                     $return = array();
                     foreach($cached_result as $result)

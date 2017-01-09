@@ -30,10 +30,20 @@ class User_Model extends CMS_Model
 
     public static function login($user_name, $password)
     {
-        $user = User_Model::find_where(array(
+        $user_list = User_Model::find_where(array(
             'user_name' => $user_name, 
             'hashed_password' => static::hash($password)
         ));
+        if(count($user_list) == 0)
+        {
+            return FALSE;
+        }
+        else
+        {
+            $user = $user_list[0];
+            $_SESSION['user_id'] = $user->id;
+            return TRUE;
+        }
     }
 
     public static function hash($password)

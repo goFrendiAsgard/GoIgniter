@@ -296,6 +296,8 @@ But let's make a full featured model for now:
         protected $_deleted_at = 'deleted_at';  // field for "soft deletion" logging
         protected $_deleted = 'deleted';        // field for "soft deletion" flag
         protected $_columns = ['code', 'parent_id', 'child_count']; // Other fields
+        protected $_unique_columns = ['code'];  // Set of columns that act as "unique key"
+        protected $_turn_off_cache = FALSE;     // ORM operations need to run a lot of query. If turn_off_cache is FALSE, then Go_Model will always try to use as minimal "SELECT" as possible
 
         protected $code = 'default'; // property that represent field's default value
 

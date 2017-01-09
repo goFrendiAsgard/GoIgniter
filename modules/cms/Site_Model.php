@@ -3,7 +3,7 @@ namespace Modules\Cms;
 use \Modules\Cms\CMS_Model;
 use \Site;
 
-class Site_Alias extends CMS_Model
+class Site_Alias_Model extends CMS_Model
 {
     protected $_table = 'cms_site_alias';
     protected $_site_id = '';
@@ -31,7 +31,7 @@ class Site_Model extends CMS_Model
 
     protected $_children = array(
         'aliases' => array(
-            'model' => '\Modules\Cms\Site_Alias',
+            'model' => '\Modules\Cms\Site_Alias_Model',
             'foreign_key' => 'site_id',
         )
     );
@@ -89,7 +89,7 @@ class Site_Model extends CMS_Model
         parent::after_save($success, $error_message);
         $this->delete_old_site();
 
-        $alises = array();
+        $aliases = array();
         foreach($this->aliases as $alias)
         {
             $aliases[] = $alias->alias;

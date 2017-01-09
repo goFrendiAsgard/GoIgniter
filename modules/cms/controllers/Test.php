@@ -721,12 +721,58 @@ class Test extends Test_Controller
 
     function test_user_model()
     {
-        $user = new User_Model(array(
-            'user_name' => 'Tono', 
-            'email' => 'email@email.com',
+        // test create user
+
+        $admin = new User_Model(array(
+            'user_name' => 'admin', 
+            'email' => 'admin@email.com',
             'password' => 'password',
         ));
-        $user->save();
+        $admin->save();
+
+        $test = $this->db->count_all('cms_user');
+        $expected_result = 1;
+        $this->unit->run($test, $expected_result, 'User \'admin\' created, there should be one user in the table');
+
+        // test login
+        User_Model::login('admin', 'password');
+        $test = User_Model::get_current_user()->user_name;
+        $expected_result = 'admin';
+        $this->unit->run($test, $expected_result, 'Right now, the current user should be admin');
+
+        // test logout 
+        User_Model::logout();
+        $test = User_Model::get_current_user();
+        $expected_result = NULL;
+        $this->unit->run($test, $expected_result, 'Logout, current user should be null');
+
+        // test login again, wrongly
+        User_Model::login('admin', 'wrongpassword');
+        $test = User_Model::get_current_user();
+        $expected_result = NULL;
+        $this->unit->run($test, $expected_result, 'Login with the wrong password, current user should be null');
+
+        // test login again, correctly
+        User_Model::login('admin', 'password');
+        $test = User_Model::get_current_user()->user_name;
+        $expected_result = 'admin';
+        $this->unit->run($test, $expected_result, 'Login with the right password, right now, the current user should be admin');
+
+        $employee = new User_Model(array(
+            'user_name' => 'employee', 
+            'email' => 'employee@email.com',
+        ));
+        $employee->password = 'employee';
+
+        $employee->save();
+        $test = $this->db->count_all('cms_user');
+        $expected_result = 2;
+        $this->unit->run($test, $expected_result, 'User \'employee\' created, there should be two users in the table');
+
+        $test = $employee->creator->user_name;
+        $expected_result = 'admin';
+        $this->unit->run($test, $expected_result, 'Employee\'s creator should be admin');
+
     }
 
     function test_site_model()
@@ -742,10 +788,19 @@ class Test extends Test_Controller
         $site = new Site_Model(array(
             'code' => 'alpha',
             'aliases' => array(
-                array('alias' => 'alpha.com')
-            ),
+                array('alias' => 'alpha.com'),
+                array('alias' => 'aliph.com'),
+            )
         ));
-        //$site->save();
+        $site->save();
+
+        $test = $this->db->count_all('cms_site');
+        $expected_result = 1;
+        $this->unit->run($test, $expected_result, 'Site alpha has been added');
+
+        $test = $this->db->count_all('cms_site_alias');
+        $expected_result = 2;
+        $this->unit->run($test, $expected_result, 'Alias alpha and aliph has been added');
     }
 
 }

@@ -57,7 +57,6 @@ abstract class CMS_Model extends Go_Model
         }
 
         $allowed_columns = parent::_set_allowed_columns();
-
     }
 
     protected function _add_default_site()
