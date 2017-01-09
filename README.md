@@ -386,8 +386,11 @@ In my opinion, this is how ORM should be implemented. No hasMany, belongsTo, and
 
 # ORM Magic
 
-Like in Laravel's Eloquent, Go_Model also allows you to define your own magical setter and getter easily.
-Let's see this example
+Like in Laravel's Eloquent, Go_Model also allows you to define your own magical `setter` and `getter` easily.
+
+Also, in Go_Model, you can define some `unique_columns`. This is useful for a case when you don't want users ends up with the same user_name.
+
+Let's see this example:
 
 ```php
     <?php
