@@ -5,7 +5,7 @@ class Migration_Init_cms extends CMS_Migration {
 
     public function up()
     {
-        // Create test_node
+        // test_node
         $this->add_default_fields();
         $this->add_field(array(
             'code'          => $this->TYPE_VARCHAR_255,
@@ -14,35 +14,35 @@ class Migration_Init_cms extends CMS_Migration {
         ));
         $this->create_table('test_node');
 
-        // Create module
+        // module
         $this->add_cms_default_fields();
         $this->add_field(array(
             'code'      => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_module');
 
-        // Create site
+        // site
         $this->add_cms_default_fields();
         $this->add_field(array(
             'code'      => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_site');
 
-        // Create site_alias
+        // site_alias
         $this->add_cms_default_fields();
         $this->add_field(array(
             'alias'     => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_site_alias');
 
-        // Create site_module
+        // site_module
         $this->add_cms_general_default_fields();
         $this->add_field(array(
             'module_id' => $this->TYPE_FOREIGN_KEY,
         ));
         $this->create_table('cms_site_module');
 
-        // Create config
+        // config
         $this->add_cms_default_fields();
         $this->add_field(array(
             'module_id'     => $this->TYPE_FOREIGN_KEY,
@@ -53,7 +53,7 @@ class Migration_Init_cms extends CMS_Migration {
         ));
         $this->create_table('cms_config');
 
-        // Create group
+        // group
         $this->add_cms_default_fields();
         $this->add_field(array(
             'module_id'     => $this->TYPE_FOREIGN_KEY,
@@ -61,19 +61,84 @@ class Migration_Init_cms extends CMS_Migration {
         ));
         $this->create_table('cms_group');
 
-        // Create user
+        // user
         $this->add_cms_general_default_fields();
         $this->add_field(array(
             'user_name'         => $this->TYPE_VARCHAR_255,
-            'hashed_password'   => $this->TYPE_VARCHAR_255,
-            'email'             => $this->TYPE_VARCHAR_255,
+            'email'             => $this->TYPE_VARCHAR_255_NULL,
+            'api_session_code'  => $this->TYPE_VARCHAR_255_NULL,
+            'hashed_password'   => $this->TYPE_VARCHAR_255_NULL,
+            'first_name'        => $this->TYPE_VARCHAR_255_NULL,
+            'last_name'         => $this->TYPE_VARCHAR_255_NULL,
+            'birthday'          => $this->TYPE_DATETIME_NULL,
+            'profile_picture'   => $this->TYPE_TEXT_NULL,
+            'description'       => $this->TYPE_TEXT_NULL,
+            'last_login'        => $this->TYPE_DATETIME_NULL,
+            'active'            => $this->TYPE_TINYINT_UNSIGNED_10,
         ));
         $this->create_table('cms_user');
 
+        // user_group
+        $this->add_cms_default_fields();
+        $this->add_field(array(
+            'user_id'   => $this->TYPE_FOREIGN_KEY,
+            'group_id'  => $this->TYPE_FOREIGN_KEY,
+        ));
+        $this->create_table('cms_user_group');
+
+        // layout
+        $this->add_cms_default_fields();
+        $this->add_field(array(
+            'name'                  => $this->TYPE_VARCHAR_255,
+            'template'              => $this->TYPE_TEXT_NULL,
+            'template_config_id'    => $this->TYPE_FOREIGN_KEY,
+            'parent_name_config_id' => $this->TYPE_FOREIGN_KEY,
+            'parent_id'             => $this->TYPE_FOREIGN_KEY,
+            'module_id'             => $this->TYPE_FOREIGN_KEY,
+        ));
+        $this->create_table('cms_layout');
+
+        // content
+        $this->add_cms_default_fields();
+        $this->add_field(array(
+            'route_key'             => $this->TYPE_VARCHAR_255,
+            'is_static'             => $this->TYPE_TINYINT_UNSIGNED_10,
+            'route_to'              => $this->TYPE_VARCHAR_255_NULL,
+            'content'               => $this->TYPE_VARCHAR_255_NULL,
+            'content_config_id'     => $this->TYPE_FOREIGN_KEY,
+            'module_id'             => $this->TYPE_FOREIGN_KEY,
+            'layout_id'             => $this->TYPE_FOREIGN_KEY,
+            'authenticated'         => $this->TYPE_TINYINT_UNSIGNED_10,
+            'unauthenticated'       => $this->TYPE_TINYINT_UNSIGNED_10,
+            'is_crucial'            => $this->TYPE_TINYINT_UNSIGNED_10,
+        ));
+        $this->create_table('cms_content');
+
+        // content_group
+        $this->add_cms_default_fields();
+        $this->add_field(array(
+            'group_id'      => $this->TYPE_FOREIGN_KEY,
+            'content_id'    => $this->TYPE_FOREIGN_KEY,
+        ));
+        $this->create_table('cms_content_group');
+
+        // navigation
+        $this->add_cms_default_fields();
+        $this->add_field(array(
+            'name'          => $this->TYPE_VARCHAR_255,
+            'content_id'    => $this->TYPE_FOREIGN_KEY,
+            'parent_id'     => $this->TYPE_FOREIGN_KEY,
+        ));
+        $this->create_table('cms_navigation');
     }
 
     public function down()
     {
+        $this->drop_table('cms_navigation');
+        $this->drop_table('cms_content_group');
+        $this->drop_table('cms_content');
+        $this->drop_table('cms_layout');
+        $this->drop_table('cms_user_group');
         $this->drop_table('cms_user');
         $this->drop_table('cms_group');
         $this->drop_table('cms_config');

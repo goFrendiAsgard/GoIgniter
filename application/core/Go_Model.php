@@ -465,7 +465,7 @@ abstract class Go_Model extends CI_Model
         // check the actual field on the database
         if(!$this->db->table_exists($this->_table))
         {
-            show_error('Table '.$this->_table.' is not exists');
+            show_error('Table '.$this->db->dbprefix.$this->_table.' does not exists');
         }
 
         if(count($this->_columns) == 0  || !empty($this->_id) || !empty($this->_deleted) || !empty($this->_created_at) || !empty($this->_updated_at) || !empty($this->_deleted_at) || count($this->_parent) > 0)
@@ -503,7 +503,7 @@ abstract class Go_Model extends CI_Model
 
                 if(!$new_id_is_set)
                 {
-                    show_error('Field '.$this->_id.' not found in '.$this->_table);
+                    show_error('Field '.$this->_id.' was not found in '.$this->db->dbprefix.$this->_table);
                 }
             }
 

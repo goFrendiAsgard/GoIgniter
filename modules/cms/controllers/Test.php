@@ -801,6 +801,10 @@ class Test extends Test_Controller
         $test = $this->db->count_all('cms_site_alias');
         $expected_result = 2;
         $this->unit->run($test, $expected_result, 'Alias alpha and aliph has been added');
+
+        $test = $core_site->get_aliases_by_code('alpha');
+        $expected_result = array('alpha.com', 'aliph.com');
+        $this->unit->run($test, $expected_result, 'Site alpha should have two aliases, alpha.com, aliph.com');
     }
 
 }
