@@ -674,6 +674,32 @@ class Test extends Test_Controller
 
     }
 
+    function test_orm_circular_reference()
+    {
+        $CI =& get_instance();
+        $db =& $CI->db;
+
+        // create "god"
+        $god = new Full_Test_Node(array('code' => 'god'));
+        $god->save();
+
+        // now, who is the parent of "god"? ah of course, "god" himself :v
+        // so, try circular reference
+        $god->parent = $god;
+        $god->save();
+
+        // god's parent should be god. Look at the record from db to make sure
+        $expected_result = 'god';
+        $test = $god->parent->code;
+        $notes = var_export($db->from('test_node')->where('id >', 8)->get()->result(), TRUE);
+        $this->unit->run($test, $expected_result, 'Since $god->parent is itself, then $god->parent->code should be "god"', $notes);
+
+        // god's child should also be god.
+        $expected_result = 'god';
+        $test = $god->children[0]->code;
+        $this->unit->run($test, $expected_result, 'Since $god->children[0] is itself, then $god->children[0]->code should also be "god"');
+    }
+
     function test_go_migration_alias()
     {
         $go_migration = new Go_Migration();

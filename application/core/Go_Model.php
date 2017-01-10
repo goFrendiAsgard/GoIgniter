@@ -232,11 +232,14 @@ abstract class Go_Model extends CI_Model
         // create parent if not exist, or just simply return this val
         $parent = $this->_data_to_entity($val, $class_name);
 
+        /**
         if($class_name == get_called_class() && ($this->_get_id() == $parent->_get_id() && $this->_get_id() != NULL))
         {
             // no, you cannot set this record as the parent of itself
             return FALSE;
         }
+        * Now you can :v
+        */
 
         // look for parent's children configuration refering to this model
         $backref_relation_name = $this->_get_backref_relation($relation_name);
@@ -845,11 +848,14 @@ abstract class Go_Model extends CI_Model
 
                 foreach($children as $child)
                 {
-                    if($child == NULL || $child->_is_deleted() || !$child->_modified){ continue; }
+                    if( $child == NULL || $child->_is_deleted() ){ continue; }
 
-                    // set foreign key and save
-                    $child->_values[$fk] = $pk;
-                    $child->_do_save($success, $error_message);
+                    if($child->_modified)
+                    {
+                        // set foreign key and save
+                        $child->_values[$fk] = $pk;
+                        $child->_do_save($success, $error_message);
+                    }
 
                     $new_children[] = $child;
                     if(!$success)
