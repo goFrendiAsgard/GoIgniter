@@ -451,12 +451,14 @@ These functions are always available, either in models, views, or controllers
 
 # Soon to be added
 
-* CMS Module
-* Amigo (kind of Artisan in Laravel)
-* Unit testing (Failed)
+* CMS Module (In progress)
+* Amigo CLI (In progress)
+* Unit testing (Failed, use CI's default)
 * CodeIgniter4 like Model & Entity (Failed, do another approach)
 * Multisite (done)
 * Laravel's like blade engine (No need, use twig instead)
+* ORM many-to-many
+* Middleware by using anotation in CMS Controller
 
 # The bad things
 

@@ -89,7 +89,7 @@ class Migration_Init_cms extends CMS_Migration {
         // layout
         $this->add_cms_default_fields();
         $this->add_field(array(
-            'name'                  => $this->TYPE_VARCHAR_255,
+            'code'                  => $this->TYPE_VARCHAR_255,
             'template'              => $this->TYPE_TEXT_NULL,
             'template_config_id'    => $this->TYPE_FOREIGN_KEY,
             'parent_name_config_id' => $this->TYPE_FOREIGN_KEY,
@@ -101,6 +101,7 @@ class Migration_Init_cms extends CMS_Migration {
         // content
         $this->add_cms_default_fields();
         $this->add_field(array(
+            'code'                  => $this->TYPE_VARCHAR_255,
             'route_key'             => $this->TYPE_VARCHAR_255,
             'is_static'             => $this->TYPE_TINYINT_UNSIGNED_10,
             'route_to'              => $this->TYPE_VARCHAR_255_NULL,
