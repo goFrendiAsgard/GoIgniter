@@ -6,7 +6,7 @@ class Migration_Init_cms extends CMS_Migration {
     public function up()
     {
         // test_node
-        $this->add_default_fields();
+        $this->add_cms_default_fields();
         $this->add_field(array(
             'code'          => $this->TYPE_VARCHAR_255,
             'parent_id'     => $this->TYPE_FOREIGN_KEY,

@@ -74,9 +74,6 @@ class Module_Migrator extends CI_Model
             $config['migration_version'] = $version;
         }
 
-        $alias = 'migration_'.substr(md5($module), 0, 10);
-
-
         require_once(BASEPATH.'libraries/Migration.php');
         $migration = new \CI_Migration($config);
 

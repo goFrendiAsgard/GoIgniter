@@ -42,7 +42,11 @@ class Site_Model extends CMS_Model
         $site_code = $site->get_current_code();
         if($site_code != NULL)
         {
-            return static::find_where('code', $site_code);
+            $site_list = static::find_where('code', $site_code);
+            if(count($site_list) > 0)
+            {
+                return $site_list[0];
+            }
         }
         return NULL;
     }

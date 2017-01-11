@@ -39,6 +39,10 @@ class Go_Migration extends CI_Migration
         {
             return call_user_func_array(array($this->dbforge, $method), $arguments);
         }
+        else
+        {
+            parent::__call($method, $arguments);
+        }
     }
 
     public function __get($var)

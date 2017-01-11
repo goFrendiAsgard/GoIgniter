@@ -20,13 +20,13 @@ class CMS_Module_Migrator extends \Module_Migrator
             $site_list = Site_Model::find_where('code', $current_site_code);
             if(count($site_list) > 0)
             {
-                $current_site = $site[0];
+                $current_site = $site_list[0];
                 $table_suffix = '_site_'.$current_site->id;
             }
         }
         
         $config = $this->migration_config;
-        return $config['migration_table'].'_'.$module;
+        return $config['migration_table'] . '_' . $module . $table_suffix;
     }
 
     protected function get_migration_path($module)

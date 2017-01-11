@@ -10,10 +10,11 @@ namespace Modules\Cms\Controllers;
 use \Site;
 use \Go_Migration;
 use \Module_Migrator;
-use \Modules\Cms\Test_Controller;
 use \Modules\Cms\Mutator;
 use \Modules\Cms\Site_Model;
 use \Modules\Cms\User_Model;
+use \Modules\Cms\Test_Controller;
+use \Modules\Cms\CMS_Module_Migrator;
 use \Modules\Cms\Models\Genesis;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -270,12 +271,6 @@ class Test extends Test_Controller
         $expected_result = '';
         $this->unit->run($test, $expected_result, '$migrate->migrate_all("current")');
 
-        $tables = $this->get_tables();
-        $test = count($tables) == count(get_available_modules());
-        $expected_result = TRUE;
-        $notes = 'Table : '.implode(', ', $tables);
-        $this->unit->run($test, $expected_result, 'Count of table should be equal to count of available modules', $notes);
-
         // Test DB Migration
         $migrator->migrate('cms');
         $errors = $migrator->get_error();
@@ -283,12 +278,6 @@ class Test extends Test_Controller
         $test = $errors['cms'];
         $expected_result = '';
         $this->unit->run($test, $expected_result, '$migrate->migrate("cms")');
-
-        $tables = $this->get_tables();
-        $test = count($tables) > count(get_available_modules());
-        $expected_result = TRUE;
-        $notes = 'Table : '.implode(', ', $tables);
-        $this->unit->run($test, $expected_result, 'Count of table should be more than count of available modules', $notes);
     }
 
     function test_site()
@@ -867,6 +856,73 @@ class Test extends Test_Controller
         $test = $core_site->get_aliases_by_code('alpha');
         $expected_result = array('alpha.com', 'aliph.com');
         $this->unit->run($test, $expected_result, 'Site alpha should have two aliases, alpha.com, aliph.com');
+
+        $old_server_name = $_SERVER['SERVER_NAME'];
+        $_SERVER['SERVER_NAME'] = 'alpha.com';
+
+        // test alpha's code
+        $expected_result = 'alpha';
+        $test = $core_site->get_current_code();
+        $this->unit->run($test, $expected_result, 'Change server name to "alpha.com", site current code should be "alpha"');
+
+        // test alpha's id
+        $expected_result = 1;
+        $test = Site_Model::get_current_site()->id;
+        $this->unit->run($test, $expected_result, 'Site current id should be 1');
+
+        $_SERVER['SERVER_NAME'] = $old_server_name;
+    }
+
+    function test_cms_module_migrator()
+    {
+        $this->load->config('migration');
+        $config = $this->config->config;
+        $migration_table = array_key_exists('migration.migration_table', $config)? $config['migration.migration_table'] : $config['migration_table'];
+
+        // prepare migration on alpha site
+        $old_server_name = $_SERVER['SERVER_NAME'];
+        $_SERVER['SERVER_NAME'] = 'alpha.com';
+        $cms_module_migrator =  new CMS_Module_Migrator();
+        $cms_module_migrator->migrate_all();
+
+        // test version
+        $expected_result = TRUE;
+        $row = $this->db->select('version')->from($migration_table.'_cms_site_1')->get()->row();
+        $test = $row->version > 0;
+        $notes = 'Current version is now '.$row->version;
+        $this->unit->run($test, $expected_result, 'After migration of alpha site, the version should be greater than 0', $notes);
+
+        // test existance of gilgamesh
+        $expected_result = TRUE;
+        $row = $this->db->select('*')->from('test_node')->where('site_id', 1)->where('code', 'gilgamesh')->get()->row();
+        $test = $row != NULL;
+        $notes = var_export($row, TRUE);
+        $this->unit->run($test, $expected_result, 'After migration of alpha site, we should have gilgamesh with site_id 1', $notes);
+
+        // back to zero
+        $cms_module_migrator->migrate_all('current');
+        $_SERVER['SERVER_NAME'] = $old_server_name;
+
+        // prepare migration on main site
+        $cms_module_migrator =  new CMS_Module_Migrator();
+        $cms_module_migrator->migrate_all();
+
+        // test version
+        $expected_result = TRUE;
+        $row = $this->db->select('version')->from($migration_table.'_cms_site_main')->get()->row();
+        $test = $row->version > 0;
+        $notes = 'Current version is now '.$row->version;
+        $this->unit->run($test, $expected_result, 'After migration of main site, the version should be greater than 0', $notes);
+
+        // test existance of gilgamesh
+        $expected_result = TRUE;
+        $row = $this->db->select('*')->from('test_node')->where('site_id', NULL)->where('code', 'gilgamesh')->get()->row();
+        $test = $row != NULL;
+        $notes = var_export($row, TRUE);
+        $this->unit->run($test, $expected_result, 'After migration of main site, we should have gilgamesh with site_id NULL', $notes);
+
+        // back to zero
+        $cms_module_migrator->migrate_all('current');
     }
 
 }
