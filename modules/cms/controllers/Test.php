@@ -688,17 +688,53 @@ class Test extends Test_Controller
         $god->parent = $god;
         $god->save();
 
+        // god should be exists in the database by now
+        $god_in_db = $db->select('*')->from('test_node')->where('code', 'god')->get()->row();
+        $expected_result = TRUE;
+        $test = $god_in_db !== NULL;
+        $notes = var_export($god_in_db, TRUE);
+        $this->unit->run($test, $expected_result, 'Perform $god->save(); God should be exists in database', $notes);
+
         // god's parent should be god. Look at the record from db to make sure
         $expected_result = 'god';
         $test = $god->parent->code;
-        $notes = var_export($db->from('test_node')->where('id >', 8)->get()->result(), TRUE);
-        $this->unit->run($test, $expected_result, 'Since $god->parent is itself, then $god->parent->code should be "god"', $notes);
+        $this->unit->run($test, $expected_result, 'Since $god->parent is itself, then $god->parent->code should be "god"');
 
         // god's child should also be god.
         $expected_result = 'god';
         $test = $god->children[0]->code;
         $this->unit->run($test, $expected_result, 'Since $god->children[0] is itself, then $god->children[0]->code should also be "god"');
     }
+
+    function test_orm_circular_reference_again()
+    {
+        $CI =& get_instance();
+        $db =& $CI->db;
+
+        // create "other_god"
+        $other_god = new Full_Test_Node(array('code' => 'other_god'));
+        $other_god->parent = $other_god;
+        $other_god->save();
+
+
+        // god should be exists in the database by now
+        $other_god_in_db = $db->select('*')->from('test_node')->where('code', 'other_god')->get()->row();
+        $expected_result = TRUE;
+        $test = $other_god_in_db !== NULL;
+        $notes = var_export($other_god_in_db, TRUE);
+        $this->unit->run($test, $expected_result, 'Perform $other_god->save(); God should be exists in database', $notes);
+
+        // other_god's parent should be other_god. Look at the record from db to make sure
+        $expected_result = 'other_god';
+        $test = $other_god->parent->code;
+        $this->unit->run($test, $expected_result, 'This test is different from the first, since we assign $other_god->parent to itself even before save it to the database first. And since $other_god->parent is itself, then $other_god->parent->code should be "other_god"');
+
+        // other_god's child should also be other_god.
+        $expected_result = 'other_god';
+        $test = $other_god->children[0]->code;
+        $this->unit->run($test, $expected_result, 'Since $other_god->children[0] is itself, then $other_god->children[0]->code should also be "other_god"');
+    }
+
 
     function test_go_migration_alias()
     {

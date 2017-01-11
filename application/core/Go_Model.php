@@ -636,8 +636,20 @@ abstract class Go_Model extends CI_Model
         return $array;
     }
 
-    // save this record
+    protected function _is_old_record()
+    {
+        $pk = $this->_get_id();
+        $is_old_record = $pk != NULL;
+        if($is_old_record)
+        {
+            $class = get_called_class();
+            $record = $class::find_by_id($pk, $this->db);
+            $is_old_record = $record !== NULL;
+        }
+        return $is_old_record;
+    }
 
+    // save this record
     public function save()
     {
         return $this->_do_save();
@@ -666,13 +678,7 @@ abstract class Go_Model extends CI_Model
         $this->db->trans_start();
 
         // is this old_record?
-        $is_old_record = $pk != NULL;
-        if($is_old_record)
-        {
-            $class = get_called_class();
-            $record = $class::find_by_id($pk, $this->db);
-            $is_old_record = $record !== NULL;
-        }
+        $is_old_record = $this->_is_old_record();
 
         // protect uniqueness 
         if(count($this->_unique_columns) > 0)
@@ -768,6 +774,10 @@ abstract class Go_Model extends CI_Model
         {
             if($this->_modified && !$this->_is_deleted())
             {
+                // anything can happened, this record can already be saved already even if it wasn't initially
+                // for example, a record that has itself as parent. 
+                $is_old_record = $this->_is_old_record();
+
                 // turn to array
                 $simple_array = $this->as_array(TRUE);
 

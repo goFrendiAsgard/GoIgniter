@@ -46,10 +46,10 @@ class Migration_Init_cms extends CMS_Migration {
         $this->add_cms_default_fields();
         $this->add_field(array(
             'module_id'     => $this->TYPE_FOREIGN_KEY,
-            'type'          => $this->TYPE_VARCHAR_255,
-            'key'           => $this->TYPE_VARCHAR_255,
-            'value'         => $this->TYPE_VARCHAR_255,
-            'json_options'  => $this->TYPE_VARCHAR_255,
+            'type'          => $this->TYPE_VARCHAR_255_NULL,
+            'key'           => $this->TYPE_VARCHAR_255_NULL,
+            'value'         => $this->TYPE_VARCHAR_255_NULL,
+            'json_options'  => $this->TYPE_VARCHAR_255_NULL,
         ));
         $this->create_table('cms_config');
 
