@@ -21,11 +21,16 @@ abstract class Go_Model extends CI_Model
     // array of associative array. Each child should has these keys:
     // "model", "foreign_key", "on_delete", and "on_purge".
     // on_delete & on_purge can be "restrict", "cascade", and "set_null"
-    protected  $_children        = array();
+    protected $_children        = array();
 
     // array of associative array. Each child should has these keys:
     // "model", "foreign_key", "on_delete".
-    protected  $_parents         = array();
+    protected $_parents         = array();
+
+    // array of associative array. Each child should has these keys:
+    // "connector_model", "model", "on_delete", and "on_purge".
+    // on_delete & on_purge can be "restrict", "cascade", and "set_null"
+    protected $_many_to_many    = array();
 
     protected function before_save   (&$success, &$error_message){}
     protected function after_save    (&$success, &$error_message){}
@@ -112,6 +117,71 @@ abstract class Go_Model extends CI_Model
         }
 
         return new $class($new_data, $this->db);
+    }
+
+    public function __call($method, $parameter)
+    {
+        $mode = NULL;
+        $relation = NULL;
+        $child_type = NULL;
+
+        // determine mode and relation
+        if(substr($method, 0, 4) == 'add_')
+        {
+            $mode = 'add';
+            $relation = substr($method, 4);
+        }
+        else if(substr($method, 0, 7) == 'remove_')
+        {
+            $mode = 'remove';
+            $relation = substr($method, 7);
+        }
+
+        // determine child type
+        if(array_key_exists($relation, $this->_children))
+        {
+            $child_type = 'one_to_many';
+        }
+        else if(array_key_exists($relation, $this->_many_to_many))
+        {
+            $child_type = 'many_to_many';
+        }
+
+        // do the real action
+        if(in_array($child_type, array('one_to_many', 'many_to_one')) && in_array($mode, array('add', 'remove')) && count($parameter) > 0)
+        {
+            $relation_config = $this->_children[$relation];
+            if($child_type == 'one_to_many')
+            {
+                // get other config
+                $class_name = $relation_config['model'];
+                $backref_relation = $this->_get_backref_relation($relation);
+                $child = $this->_data_to_entity($parameter[0], $class_name);
+
+                // real action, add or remove
+                if($mode == 'add')
+                {
+                    $child->_set_parent($backref_relation, $this);
+                }
+                else if($mode == 'remove')
+                {
+                    $child->_unset_parent($backref_relation);
+                }
+            }
+            else if($child_type == 'many_to_many')
+            {
+                if($mode == 'add')
+                {
+                    // TODO: let it be done
+                }
+                else if($mode == 'remove')
+                {
+                    // TODO: let it be done
+                }
+            }
+
+        }
+
     }
 
     public function __get($key)
@@ -222,24 +292,17 @@ abstract class Go_Model extends CI_Model
             $this->_fetched_parents[] = $relation_name;
         }
 
+        /*
         if($val == NULL)
         {
             $this->_values[$relation_name] = NULL;
             $this->_values[$foreign_key] = NULL;
             return FALSE;
         }
+         */
 
         // create parent if not exist, or just simply return this val
         $parent = $this->_data_to_entity($val, $class_name);
-
-        /**
-        if($class_name == get_called_class() && ($this->_get_id() == $parent->_get_id() && $this->_get_id() != NULL))
-        {
-            // no, you cannot set this record as the parent of itself
-            return FALSE;
-        }
-        * Now you can :v
-        */
 
         // look for parent's children configuration refering to this model
         $backref_relation_name = $this->_get_backref_relation($relation_name);
@@ -266,6 +329,7 @@ abstract class Go_Model extends CI_Model
         // finally after parent's value has been altered as necessary add parent's reference to this model
         $this->_values[$relation_name] =& $parent;
         $this->_values[$foreign_key] = $parent->_get_id();
+        $this->_modified = TRUE;
     }
 
 
@@ -300,6 +364,7 @@ abstract class Go_Model extends CI_Model
         // finally after parent's value has been altered as necessary set this parent's reference to NULL 
         $this->_values[$relation_name] = NULL;
         $this->_values[$foreign_key] = NULL;
+        $this->_modified = TRUE;
     }
 
     public function __set($key, $val)
@@ -326,35 +391,47 @@ abstract class Go_Model extends CI_Model
             // children 
             if(array_key_exists($key, $this->_children))
             {
-                // assigned a new column, then this must be empty first 
-                $this->_values[$key] = array();
+
                 $relation_config = $this->_children[$key];
                 $class_name = $relation_config['model'];
                 $foreign_key = $relation_config['foreign_key'];
 
                 $child_config = $class_name::_get_static_config();
                 $child_parent_config = $child_config['parents'];
-                $true_config_found = FALSE;
-                foreach($child_parent_config as $alias=>$config)
-                {
-                    if(trim($config['model'], '\\') == trim($current_class_name, '\\') && $config['foreign_key'] == $foreign_key)
-                    {
-                        foreach($val as $child_data)
-                        {
-                            $new_child = $this->_data_to_entity($child_data, $class_name);
-                            if($new_child != NULL)
-                            {
-                                $new_child->_set_parent($alias, $this);
-                            }
-                        }
+                $backref_relation = $this->_get_backref_relation($key, $class_name);
+                $backref_config = $child_parent_config[$backref_relation];
 
-                        $true_config_found = TRUE;
-                        break;
-                    }
+
+                if(!isset($this->_values[$key]))
+                {
+                    // assigned a new column, then this must be empty first 
+                    $this->_values[$key] = array();
                 }
 
-                // Fallback
-                if(!$true_config_found)
+                // The true config valid
+                if(trim($backref_config['model'], '\\') == trim($current_class_name, '\\') && $backref_config['foreign_key'] == $foreign_key)
+                {
+                    // remove link from old children
+                    foreach($this->_values[$key] as &$old_child)
+                    {
+                        if($old_child != NULL)
+                        {
+                            $old_child->_unset_parent($backref_relation);
+                        }
+                    }
+
+                    // add new children
+                    foreach($val as &$child_data)
+                    {
+                        $new_child = $this->_data_to_entity($child_data, $class_name);
+                        if($new_child != NULL)
+                        {
+                            $new_child->_set_parent($backref_relation, $this);
+                        }
+                    }
+                }
+                // Fallback, children doesn't have foreign key to parent
+                else
                 {
                     foreach($val as $child_data)
                     {
@@ -365,18 +442,26 @@ abstract class Go_Model extends CI_Model
                         }
                     }
 
-                    // set _fetched children if it is not there
-                    if(!in_array($key, $this->_fetched_children))
-                    {
-                        $this->_fetched_children[] = $key;
-                    }
+                }
+
+                // set _fetched children if it is not there
+                if(!in_array($key, $this->_fetched_children))
+                {
+                    $this->_fetched_children[] = $key;
                 }
             }
 
             // parents 
             else if(array_key_exists($key, $this->_parents))
             {
-                $this->_set_parent($key, $val);
+                if($val == NULL)
+                {
+                    $this->_unset_parent($key);
+                }
+                else
+                {
+                    $this->_set_parent($key, $val);
+                }
             }
             // true columns
             else

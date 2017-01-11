@@ -14,6 +14,14 @@ class Migration_Init_cms extends CMS_Migration {
         ));
         $this->create_table('test_node');
 
+        // test_node_marriage
+        $this->add_cms_default_fields();
+        $this->add_field(array(
+            'husband_id'    => $this->TYPE_FOREIGN_KEY,
+            'wife_id'       => $this->TYPE_FOREIGN_KEY,
+        ));
+        $this->create_table('test_node_marriage');
+
         // module
         $this->add_cms_default_fields();
         $this->add_field(array(
@@ -147,6 +155,7 @@ class Migration_Init_cms extends CMS_Migration {
         $this->drop_table('cms_site_alias');
         $this->drop_table('cms_site');
         $this->drop_table('cms_module');
+        $this->drop_table('test_node_marriage');
         $this->drop_table('test_node');
     }
 }

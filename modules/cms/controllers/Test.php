@@ -663,6 +663,50 @@ class Test extends Test_Controller
 
     }
 
+    function test_orm_child_manipulation()
+    {
+        $node = new Full_Test_Node(array('code' => 'adam'));
+        $child_one = new Full_Test_Node(array('code' => 'cain'));
+        $child_two = new Full_Test_Node(array('code' => 'abel'));
+        $child_three = new Full_Test_Node(array('code' => 'set'));
+
+        $node->add_children($child_one);
+        $node->add_children($child_two);
+        $node->remove_children($child_one);
+
+        $node->save();
+        $child_one->save();
+
+        // child two's parent should be "node"
+        $expected_result = $node->id;
+        $row = $this->db->select('parent_id')->from('test_node')->where('id', $child_two->id)->get()->row();
+        $test = $row->parent_id;
+        $this->unit->run($test, $expected_result, 'child two\'s parent should be node. So the id must be same');
+
+        // child one's parent should be null
+        $expected_result = NULL;
+        $row = $this->db->select('parent_id')->from('test_node')->where('id', $child_one->id)->get()->row();
+        $test = $row->parent_id;
+        $this->unit->run($test, $expected_result, 'child two\'s parent should be null');
+
+        $node->children = array($child_three);
+        $node->save();
+        $child_two->save();
+
+        // child three's parent should now be node
+        $expected_result = $node->id;
+        $row = $this->db->select('parent_id')->from('test_node')->where('id', $child_three->id)->get()->row();
+        $test = $row->parent_id;
+        $this->unit->run($test, $expected_result, 'child three\'s parent should be node');
+
+        // child two's parent should now be null
+        $expected_result = NULL;
+        $row = $this->db->select('parent_id')->from('test_node')->where('id', $child_two->id)->get()->row();
+        $test = $row->parent_id;
+        $this->unit->run($test, $expected_result, 'child two\'s parent should be null');
+
+    }
+
     function test_orm_circular_reference()
     {
         $CI =& get_instance();
