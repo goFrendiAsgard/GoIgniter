@@ -28,7 +28,7 @@ abstract class Go_Model extends CI_Model
     protected $_parents         = array();
 
     // array of associative array. Each child should has these keys:
-    // "connector_model", "model", "on_delete", and "on_purge".
+    // "pivot_model", "model", "backref_relation", "on_delete", and "on_purge".
     // on_delete & on_purge can be "restrict", "cascade", and "set_null"
     protected $_many_to_many    = array();
 
@@ -58,6 +58,11 @@ abstract class Go_Model extends CI_Model
     public $_modified = TRUE; // by default, _modified flag is true
     public $_evaluated = FALSE; // only used in 'save' process, to mark whether this node is already evaluated or not
 
+    protected function _get_real_pivot_child($relation_name)
+    {
+        return $relation_name.md5($relation_name);
+    }
+
     protected function _set_allowed_columns()
     {
         $columns = $this->_columns;
@@ -78,12 +83,22 @@ abstract class Go_Model extends CI_Model
             }
         }
 
+        // add parents to columns
         foreach($this->_parents as $alias=>$config)
         {
             $foreign_key = $config['foreign_key'];
             if(!in_array($foreign_key, $columns))
             {
                 $columns[] = $foreign_key;
+            }
+        }
+
+        // add many_to_many
+        foreach(array_keys($this->_many_to_many) as $many_to_many)
+        {
+            if(!in_array($many_to_many, $columns))
+            {
+                $columns[] = $many_to_many;
             }
         }
 
@@ -291,15 +306,6 @@ abstract class Go_Model extends CI_Model
         {
             $this->_fetched_parents[] = $relation_name;
         }
-
-        /*
-        if($val == NULL)
-        {
-            $this->_values[$relation_name] = NULL;
-            $this->_values[$foreign_key] = NULL;
-            return FALSE;
-        }
-         */
 
         // create parent if not exist, or just simply return this val
         $parent = $this->_data_to_entity($val, $class_name);
@@ -556,10 +562,11 @@ abstract class Go_Model extends CI_Model
             show_error('Table '.$this->db->dbprefix.$this->_table.' does not exists');
         }
 
+        // get field list
+        $field_list = $this->db->list_fields($this->_table);
+
         if(count($this->_columns) == 0  || !empty($this->_id) || !empty($this->_deleted) || !empty($this->_created_at) || !empty($this->_updated_at) || !empty($this->_deleted_at) || count($this->_parent) > 0)
         {
-            // get field list
-            $field_list = $this->db->list_fields($this->_table);
 
             // add normal fields in field_list into $this->_columns.
             if(count($this->_columns) == 0)
@@ -598,7 +605,7 @@ abstract class Go_Model extends CI_Model
             // remove invalid parent
             foreach($this->_parents as $alias => $parent_config)
             {
-                if(!isset($parent_config['foreign_key']) || !isset($parent_config['model']) || !in_array($parent_config['foreign_key'], $field_list))
+                if(in_array($alias, $field_list) || !isset($parent_config['foreign_key']) || !isset($parent_config['model']) || !in_array($parent_config['foreign_key'], $field_list))
                 {
                     unset($this->_parent[$alias]);
                 }
@@ -617,25 +624,71 @@ abstract class Go_Model extends CI_Model
         // remove or repair invalid children
         foreach($this->_children as $alias => &$children_config)
         {
-            if(in_array($alias, $this->_parents) || !isset($children_config['foreign_key']) || !isset($children_config['model']))
+            if(in_array($alias, $field_list) || in_array($alias, $this->_parents) || !isset($children_config['foreign_key']) || !isset($children_config['model']))
             {
                 unset($this->_children[$alias]);
+                continue;
             }
-            else
-            {
-                // fix on_delete
-                if(!isset($children_config['on_delete']) || !in_array($children_config['on_delete'], array('restrict', 'set_null', 'cascade')))
-                {
-                    $children_config['on_delete'] = 'restrict';
-                }
 
-                // fix on_purge
-                if(!isset($children_config['on_purge']) || !in_array($children_config['on_purge'], array('restrict', 'set_null', 'cascade')))
-                {
-                    $children_config['on_purge'] = $children_config['on_delete'];
-                }
+            // fix on_delete
+            if(!isset($children_config['on_delete']) || !in_array($children_config['on_delete'], array('restrict', 'set_null', 'cascade')))
+            {
+                $children_config['on_delete'] = 'restrict';
+            }
+
+            // fix on_purge
+            if(!isset($children_config['on_purge']) || !in_array($children_config['on_purge'], array('restrict', 'set_null', 'cascade')))
+            {
+                $children_config['on_purge'] = $children_config['on_delete'];
             }
         }
+
+        // remove or repair invalid many_to_many
+        foreach($this->_many_to_many as $alias => &$many_to_many_config)
+        {
+            if(in_array($alias, $field_list) || in_array($alias, $this->_parents) || in_array($alias, $this->_children) || !isset($many_to_many_config['pivot_model']) || !isset($many_to_many_config['backref_relation']))
+            {
+                unset($this->_many_to_many[$alias]);
+                continue;
+            }
+
+            // by default pivot relation to lookup table is the same as alias
+            if(!isset($many_to_many_config['relation']))
+            {
+                $many_to_many_config['relation'] = $alias;
+            }
+
+            // get pivot class, last check
+            $pivot_class = $many_to_many_config['pivot_model'];
+            $pivot_config = $pivot_class::_get_static_config();
+            $pivot_parent_config = $pivot_config['parents'];
+            if(!in_array($many_to_many_config['relation'], array_keys($pivot_parent_config)) || !in_array($many_to_many_config['relation'], array_keys($pivot_parent_config)))
+            {
+                unset($this->_many_to_many[$alias]);
+                continue;
+            }
+
+            // fix on_delete
+            if(!isset($many_to_many_config['on_delete']) || !in_array($many_to_many_config['on_delete'], array('restrict', 'set_null', 'cascade')))
+            {
+                $many_to_many_config['on_delete'] = 'restrict';
+            }
+
+            // fix on_purge
+            if(!isset($many_to_many_config['on_purge']) || !in_array($many_to_many_config['on_purge'], array('restrict', 'set_null', 'cascade')))
+            {
+                $many_to_many_config['on_purge'] = $many_to_many_config['on_delete'];
+            }
+
+            // all clear? now add child
+            $this->_children[$this->_get_real_pivot_child($alias)] = array(
+                'model' => $many_to_many_config['pivot_model'],
+                'foreign_key' => $pivot_parent_config[$many_to_many_config['backref_relation']]['foreign_key'],
+                'on_delete' => $many_to_many_config['on_delete'],
+                'on_purge' => $many_to_many_config['on_purge']
+            );
+        }
+
     }
 
     public function __construct($obj=array(), $db = NULL)

@@ -27,6 +27,24 @@ class Test_Node extends \Go_Model
 {
 }
 
+class Test_Node_Marriage extends \Go_Model
+{
+    protected $_table = 'test_node_marriage';
+    protected $_columns = ['husband_id', 'wife_id'];
+
+    protected $_parents = array(
+        'husband' => array(
+            'model' => 'Modules\Cms\Controllers\Full_Test_Node',
+            'foreign_key' => 'husband_id',
+        ),
+        'wife' => array(
+            'model' => 'Modules\Cms\Controllers\Full_Test_Node',
+            'foreign_key' => 'wife_id',
+        ),
+    );
+
+}
+
 class Full_Test_Node extends \Go_Model
 {
     protected $_table = 'test_node';
@@ -56,13 +74,27 @@ class Full_Test_Node extends \Go_Model
         ),
     );
 
+    protected $_many_to_many = array(
+        'wife' => array(
+            'pivot_model' => 'Modules\Cms\Controllers\Test_Node_Marriage',
+            'backref_relation' => 'husband',
+            'relation' => 'wife',
+            'on_delete' => 'set_null',
+        ),
+        'husband' => array(
+            'pivot_model' => 'Modules\Cms\Controllers\Test_Node_Marriage',
+            'backref_relation' => 'wife',
+            'relation' => 'husband',
+            'on_delete' => 'set_null',
+        )
+    );
+
     protected function before_save(&$success, &$error_message)
     {
         $this->child_count = count($this->children);
     }
 
 }
-
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -510,6 +542,8 @@ class Test extends Test_Controller
         {
             $expected_result['children'][$i]['parent_id'] = NULL;
         }
+        $expected_result['wife'.md5('wife')] = array();
+        $expected_result['husband'.md5('husband')] = array();
         $test = $test_node->as_array();
         $this->unit->run($test, $expected_result, '$test_node->as_array() should return the correct array');
 
