@@ -278,9 +278,26 @@ abstract class Go_Model extends CI_Model
                         break;
                     }
                 }
-
                 // save fetched state
                 $this->_fetched_children[] = $key;
+            }
+            else if(array_key_exists($key, $this->_many_to_many))
+            {
+                // get real children
+                $child_key = $this->_get_real_pivot_child($key);
+                $children = $this->__get($child_key);
+
+                // get the config
+                $many_to_many_config = $this->_many_to_many[$key];
+                $relation = $many_to_many_config['relation'];
+
+                $virtual_children = array();
+                foreach($children as $child)
+                {
+                    $virtual_child = $child->__get($relation);
+                    $virtual_children[] = $virtual_child;
+                }
+                $this->_values[$key] = $virtual_children;
             }
 
             // get from _values
@@ -315,7 +332,7 @@ abstract class Go_Model extends CI_Model
 
         if($backref_relation_name != NULL)
         {
-            $parent_config = $parent->_get_config();
+            $parent_config = $class_name::_get_static_config();
             $parent_children = $parent->_values[$backref_relation_name];
 
             // if is exists don't need to do anything. This is also the recursive breaker
@@ -417,12 +434,16 @@ abstract class Go_Model extends CI_Model
                 // The true config valid
                 if(trim($backref_config['model'], '\\') == trim($current_class_name, '\\') && $backref_config['foreign_key'] == $foreign_key)
                 {
-                    // remove link from old children
+                    // remove link from old children if the old children is no longer part of new children
                     foreach($this->_values[$key] as &$old_child)
                     {
                         if($old_child != NULL)
                         {
                             $old_child->_unset_parent($backref_relation);
+                            if($this->_get_id() != NULL || $old_child->_get_id() != NULL)
+                            {
+                                $old_child->save();
+                            }
                         }
                     }
 
@@ -433,6 +454,10 @@ abstract class Go_Model extends CI_Model
                         if($new_child != NULL)
                         {
                             $new_child->_set_parent($backref_relation, $this);
+                            if($this->_get_id() != NULL || $new_child->_get_id() != NULL)
+                            {
+                                $new_child->save();
+                            }
                         }
                     }
                 }
@@ -455,6 +480,48 @@ abstract class Go_Model extends CI_Model
                 {
                     $this->_fetched_children[] = $key;
                 }
+            }
+
+            // many to many
+            else if(array_key_exists($key, $this->_many_to_many))
+            {
+                // get real children
+                $child_key = $this->_get_real_pivot_child($key);
+                $children = $this->__get($child_key);
+
+                // get the config
+                $many_to_many_config = $this->_many_to_many[$key];
+                $relation = $many_to_many_config['relation'];
+                $backref_relation = $many_to_many_config['backref_relation'];
+                $pivot_class = $many_to_many_config['pivot_model'];
+                $pivot_config = $pivot_class::_get_static_config();
+                $virtual_child_class = $pivot_config['parents'][$relation]['model'];
+
+                // delete the old children
+                foreach($children as $old_child)
+                {
+                    // remove reference to this record
+                    $old_child->_unset_parent($pivot_config[$backref_relation]);
+
+                    // having id? delete it
+                    if($old_child->_get_id() !== NULL)
+                    {
+                        $old_child->delete();
+                    }
+                }
+
+                // add the new children
+                $new_children = array();
+                foreach($val as $virtual_child)
+                {
+                    $virtual_child = $this->_data_to_entity($virtual_child, $virtual_child_class);
+                    $child = new $pivot_class(array(), $this->db);
+                    $child->_set_parent($backref_relation, $this);
+                    $child->_set_parent($relation, $virtual_child);
+                    $new_children[] = $child;
+                }
+                $this->__set($child_key, $new_children);
+
             }
 
             // parents 
@@ -918,6 +985,20 @@ abstract class Go_Model extends CI_Model
 
                 // turn to array
                 $simple_array = $this->as_array(TRUE);
+
+                // remove aliases
+                foreach(array_keys($this->_parents) as $parent_alias)
+                {
+                    unset($simple_array[$parent_alias]);
+                }
+                foreach(array_keys($this->_children) as $child_alias)
+                {
+                    unset($simple_array[$child_alias]);
+                }
+                foreach(array_keys($this->_many_to_many) as $many_to_many_alias)
+                {
+                    unset($simple_array[$many_to_many_alias]);
+                }
 
                 // something is going to changed, delete cached_result
                 $class = get_called_class();

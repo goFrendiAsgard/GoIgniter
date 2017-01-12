@@ -697,6 +697,37 @@ class Test extends Test_Controller
 
     }
 
+    function test_orm_many_to_many()
+    {
+        $pandu = new Full_Test_node(array(
+            'code' => 'pandu',
+            'wife' => array(
+                array('code' => 'kunthi'),
+                array('code' => 'madri'),
+            ),
+        ));
+        $kunthi = $pandu->wife[0];
+        $madri = $pandu->wife[1];
+
+        $expected_result = 'kunthi';
+        $test = $pandu->wife[0]->code;
+        $this->unit->run($test, $expected_result, 'First wife of pandu should be kunthi');
+
+        $expected_result = 'madri';
+        $test = $pandu->wife[1]->code;
+        $this->unit->run($test, $expected_result, 'Second wife of pandu should be madri');
+
+        $expected_result = 'pandu';
+        $test = $kunthi->husband[0]->code;
+        $this->unit->run($test, $expected_result, 'First husband of kunthi should be pandu');
+
+        $expected_result = 'pandu';
+        $test = $madri->husband[0]->code;
+        $this->unit->run($test, $expected_result, 'First husband of madri should be pandu');
+
+        $pandu->save();
+    }
+
     function test_orm_child_manipulation()
     {
         $node = new Full_Test_Node(array('code' => 'adam'));
@@ -706,7 +737,7 @@ class Test extends Test_Controller
 
         $node->add_children($child_one);
         $node->add_children($child_two);
-        $node->remove_children($child_one);
+        $node->remove_children($child_one); // child one removed while node is not saved yet, we should save it later if we want it to be available in the database
 
         $node->save();
         $child_one->save();
@@ -725,7 +756,6 @@ class Test extends Test_Controller
 
         $node->children = array($child_three);
         $node->save();
-        $child_two->save();
 
         // child three's parent should now be node
         $expected_result = $node->id;
