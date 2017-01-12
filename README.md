@@ -330,6 +330,8 @@ And here is how to use it:
     <?php // file location: modules/cms/controllers/Test.php
     namespace Modules\Cms\Controllers;
 
+    use \Modules\Cms\Models\Test_Node;
+
     class Test extends CI_Controller
     {
         public function index()
@@ -355,11 +357,12 @@ And here is how to use it:
             // test how many records available in the database
             var_dump($this->db->count_all('test_node')); // should be 7
 
-            // delete Robb
-            $test_node->children[0]->delete();
+            // delete Robb (Soft delete, behind the scene, nothing is actually deleted. We just set `deleted` into `TRUE`
+            $robb = $test_node->childre[0];
+            $robb->delete();
 
-            // purge Robb (delete Robb forever)
-            $test_node->children[0]->purge();
+            // purge Robb (now delete Robb forever)
+            $robb->purge();
 
             // test how many records available in the database
             var_dump($this->db->count_all('test_node')); // should be 6, Robb is gone
@@ -373,6 +376,24 @@ And here is how to use it:
             $node_list = Test_Node::find_all();
             var_dump(count($node_list)); // should be 6
 
+            // Create some other nodes
+            $cersei = new Test_Node(array('code' => 'cersey lannister'));
+            $joffrey = new Test_Node(array('code' => 'joffrey baratheon'));
+            $myrcella = new Test_Node(array('code' => 'myrcella baratheon'));
+            $tommen = new Test_Node(array('code' => 'tommen baratheon'));
+
+            // Using add and remove for children manipulation
+            // For each children, you can use `add_` and `remove_` function
+            $cersei->add_child($joffrey);
+            $cersei->add_child($myrcella);
+            $cersei->add_child($tommen);
+
+            $cersei->save(); // save cersei with her children
+
+            $cersei->remove_child($joffrey);
+            var_dump(count($cersei->children)); // should give you 2, since joffrey has been removed
+            var_dump($joffrey->parent); // should give you NULL, since joffrey has been removed from cersei's children, now joffrey is son of no one
+
             // ORM is cool, but I want to try query
             $node_list = Test_Node::find_by_query("SELECT * FROM test_node WHERE code LIKE '%snow%'")
             var_dump($node_list[0]->code); // And yeah, Jon Snow
@@ -384,13 +405,104 @@ And here is how to use it:
     }
 ```
 
-In my opinion, this is how ORM should be implemented. No hasMany, belongsTo, and whatever hard-to-memorize keywords.
+# ORM Many To Many
+
+Many to many is actually never exists. However in some cases, accessing data with many-to-many scenario is much more convenient compared to double layered `one-to-many`. I can't find any better example, but in some culture there is polyandry and polygamy marriage. Let's modify our node a bit
+
+```php
+    <?php // file location: modules/cms/models/Test_Node.php
+    namespace Modules\Cms\Models;
+
+    // This is the pivot model.
+    class Test_Node_Marriage extends \Go_Model
+    {
+        protected $_table = 'test_node_marriage';
+        protected $_columns = ['husband_id', 'wife_id'];
+
+        protected $_parents = array(
+            'husband' => array(
+                'model' => 'Modules\Cms\Models\Test_Node',
+                'foreign_key' => 'husband_id',
+            ),
+            'wife' => array(
+                'model' => 'Modules\Cms\Models\Test_Node',
+                'foreign_key' => 'wife_id',
+            ),
+        );
+
+    }
+
+
+    class Test_Node extends \Go_Model
+    {
+        protected $_table = 'test_node';
+        protected $_columns = ['code', 'parent_id', 'child_count'];
+        protected $_unique_columns = ['code'];
+
+        protected $_many_to_many = array(
+            'wife' => array(
+                'pivot_model' => 'Modules\Cms\Models\Test_Node_Marriage',
+                'backref_relation' => 'husband',
+                'relation' => 'wife',
+                'on_delete' => 'set_null',
+            ),
+            'husband' => array(
+                'pivot_model' => 'Modules\Cms\Models\Test_Node_Marriage',
+                'backref_relation' => 'wife',
+                'relation' => 'husband',
+                'on_delete' => 'set_null',
+            )
+        );
+
+    }
+
+```
+
+You can use the ORM as follow:
+
+```php
+    <?php // file location: modules/cms/controllers/Test.php
+    namespace Modules\Cms\Controllers;
+
+    use \Modules\Cms\Models\Test_Node;
+
+    class Test extends CI_Controller
+    {
+        public function index()
+        {
+            // initiate arjuna with a wife
+            $ulupi = new Test_Node(array('code' => 'ulupi'));
+            $arjuna = new Test_Node(array(
+                'code' => 'arjuna',
+                'wife' => array($ulupi), 
+            ));
+            $bhima = new Test_Node(array('code' => 'bhima'));
+            $draupadi = new Test_Node(array('code' => 'draupadi'));
+            $subadhra = new Test_Node(array('code' => 'subadhra'));
+
+            // add and remove many to many relation
+            $arjuna->add_wife($draupadi);
+            $arjuna->add_wife($subadhra);
+            $arjuna->remove_wife($ulupi);
+
+            $draupadi->add_husband($bhima);
+
+            var_dump(count($draupadi->husband)); // should yield 2. draupadi has 2 husbands: arjuna and bhima
+            var_dump(count($arjuna->wife)); // should yield 2, arjuna has 2 wife: draupadi and subadhra, since ulupi has been removed
+
+            // draupadi is connected to arjuna and bhima, so this should save all node except ulupi (since ulupi is not connected to anyone)
+            $draupadi->save();
+            // this will save ulupi
+            $ulupi->save();
+        }
+    }
+````
 
 # ORM Magic
 
 Like in Laravel's Eloquent, Go_Model also allows you to define your own magical `setter` and `getter` easily.
 
-Also, in Go_Model, you can define some `unique_columns`. This is useful for a case when you don't want users ends up with the same user_name.
+Also, in Go_Model, you can define pseudo composite unique key by using `_unique_columns` attribute. This is useful for a case when you don't want users ends up with the same user_name.
 
 Let's see this example:
 
