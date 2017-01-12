@@ -8,7 +8,7 @@ class Cms extends CMS_Controller
 {
 
     /**
-     * This is a comment
+     * @code('cms_index')
      */
     protected function index()
     {

@@ -12,11 +12,30 @@ abstract class CMS_Controller extends \CI_Controller
     {
         if(method_exists($this, $method))
         {
+            // get comment
             $ref = new \ReflectionMethod($this, $method);
             $comment = $ref->getDocComment();
 
-            //var_dump($comment);
-            // TODO: Parse the comment, implement Middleware, change the world, stay cool !!!
+            // init code
+            $code = '';
+
+            // get comment parts
+            if($code !== FALSE)
+            {
+                $comment_parts = explode(PHP_EOL, $comment);
+                foreach($comment_parts as $line)
+                {
+                    $line = trim(ltrim($line, '/* '));
+                    if(substr($line, 0, 5) == '@code')
+                    {
+                        $code = trim(substr($line,5), '()"\'');
+                        break;
+                    }
+                }
+            }
+
+            // okay, here we got the code
+            var_dump($code);
 
             return call_user_func_array(array($this, $method), $parameters);
         }
