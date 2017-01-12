@@ -699,7 +699,7 @@ class Test extends Test_Controller
 
     function test_orm_many_to_many()
     {
-        $pandu = new Full_Test_node(array(
+        $pandu = new Full_Test_Node(array(
             'code' => 'pandu',
             'wife' => array(
                 array('code' => 'kunthi'),
@@ -709,6 +709,7 @@ class Test extends Test_Controller
         $kunthi = $pandu->wife[0];
         $madri = $pandu->wife[1];
 
+        // test relationship between pandu, kunthi, and madri
         $expected_result = 'kunthi';
         $test = $pandu->wife[0]->code;
         $this->unit->run($test, $expected_result, 'First wife of pandu should be kunthi');
@@ -725,7 +726,32 @@ class Test extends Test_Controller
         $test = $madri->husband[0]->code;
         $this->unit->run($test, $expected_result, 'First husband of madri should be pandu');
 
+        // save to database
         $pandu->save();
+
+        // create new node "surya"
+        $surya = new Full_Test_Node(array('code' => 'surya'));
+
+        $kunthi->add_husband($surya);
+        $expected_result = 'surya';
+        $test = $kunthi->husband[1]->code;
+        $this->unit->run($test, $expected_result, 'Second husband of kunthi should be surya');
+
+        $kunthi->remove_husband($pandu);
+        $expected_result = 1;
+        $test = count($kunthi->husband);
+        $this->unit->run($test, $expected_result, 'pandu is removed, kunthi\'s husband is now only one');
+
+        $kunthi->add_husband($pandu);
+        $expected_result = 2;
+        $test = count($kunthi->husband);
+        $this->unit->run($test, $expected_result, 'pandu is re-added, kunthi\'s husband is now two again');
+
+        $kunthi->save();
+        $expected_result = 3;
+        $test = $this->db->get_where('test_node_marriage', array('deleted' => 0))->num_rows();
+        $notes = var_export($this->db->get('test_node_marriage')->result(), TRUE);
+        $this->unit->run($test, $expected_result, 'there should be three pivot table in the database', $notes);
     }
 
     function test_orm_child_manipulation()

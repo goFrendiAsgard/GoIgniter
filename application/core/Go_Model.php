@@ -137,40 +137,40 @@ abstract class Go_Model extends CI_Model
     public function __call($method, $parameter)
     {
         $mode = NULL;
-        $relation = NULL;
+        $accessed_relation = NULL;
         $child_type = NULL;
 
         // determine mode and relation
         if(substr($method, 0, 4) == 'add_')
         {
             $mode = 'add';
-            $relation = substr($method, 4);
+            $accessed_relation = substr($method, 4);
         }
         else if(substr($method, 0, 7) == 'remove_')
         {
             $mode = 'remove';
-            $relation = substr($method, 7);
+            $accessed_relation = substr($method, 7);
         }
 
         // determine child type
-        if(array_key_exists($relation, $this->_children))
+        if(array_key_exists($accessed_relation, $this->_children))
         {
             $child_type = 'one_to_many';
         }
-        else if(array_key_exists($relation, $this->_many_to_many))
+        else if(array_key_exists($accessed_relation, $this->_many_to_many))
         {
             $child_type = 'many_to_many';
         }
 
         // do the real action
-        if(in_array($child_type, array('one_to_many', 'many_to_one')) && in_array($mode, array('add', 'remove')) && count($parameter) > 0)
+        if(in_array($child_type, array('one_to_many', 'many_to_many')) && in_array($mode, array('add', 'remove')) && count($parameter) > 0)
         {
-            $relation_config = $this->_children[$relation];
             if($child_type == 'one_to_many')
             {
                 // get other config
-                $class_name = $relation_config['model'];
-                $backref_relation = $this->_get_backref_relation($relation);
+                $accessed_relation_config = $this->_children[$accessed_relation];
+                $class_name = $accessed_relation_config['model'];
+                $backref_relation = $this->_get_backref_relation($accessed_relation);
                 $child = $this->_data_to_entity($parameter[0], $class_name);
 
                 // real action, add or remove
@@ -181,17 +181,48 @@ abstract class Go_Model extends CI_Model
                 else if($mode == 'remove')
                 {
                     $child->_unset_parent($backref_relation);
+                    if($child->_get_id() != NULL)
+                    {
+                        $child->save();
+                    }
                 }
             }
             else if($child_type == 'many_to_many')
             {
+                // get real children
+                $child_key = $this->_get_real_pivot_child($accessed_relation);
+                $children = $this->__get($child_key);
+
+                // get the config
+                $many_to_many_config = $this->_many_to_many[$accessed_relation];
+                $relation = $many_to_many_config['relation'];
+                $backref_relation = $many_to_many_config['backref_relation'];
+                $pivot_class = $many_to_many_config['pivot_model'];
+                $pivot_config = $pivot_class::_get_static_config();
+                $virtual_child_class = $pivot_config['parents'][$relation]['model'];
+
+                $virtual_child = $this->_data_to_entity($parameter[0], $virtual_child_class);
+
                 if($mode == 'add')
                 {
-                    // TODO: let it be done
+                    $child = new $pivot_class();
+                    $child->_set_parent($relation, $virtual_child);
+                    $child->_set_parent($backref_relation, $this);
                 }
                 else if($mode == 'remove')
                 {
-                    // TODO: let it be done
+                    foreach($this->__get($child_key) as $child)
+                    {
+                        if($child->__get($relation) == $virtual_child)
+                        {
+                            $child->_unset_parent($backref_relation);
+                            if($child->_get_id() != NULL)
+                            {
+                                $child->delete();
+                            }
+                            break;
+                        }
+                    }
                 }
             }
 
