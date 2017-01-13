@@ -1,7 +1,7 @@
 <?php
 namespace Modules\CMS;
 use \Go_Migration;
-use \Modules\Cms\Site_Model;
+use \Modules\Cms\Models\Site_Model;
 
 class CMS_Migration extends Go_Migration
 {

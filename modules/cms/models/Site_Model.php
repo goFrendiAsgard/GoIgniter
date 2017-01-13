@@ -1,37 +1,30 @@
 <?php
-namespace Modules\Cms;
+namespace Modules\Cms\Models;
 use \Modules\Cms\CMS_Model;
+use \Modules\Cms\Models\User_Model;
+use \Modules\Cms\Models\Site_Alias_Model;
 use \Site;
-
-class Site_Alias_Model extends CMS_Model
-{
-    protected $_table = 'cms_site_alias';
-    protected $_site_id = '';
-    protected $_site_model = '';
-    protected $_columns = ['alias', 'site_id'];
-    protected $_unique_columns = ['alias'];
-
-    protected $_parents = array(
-        'site' => array(
-            'model' => '\Modules\Cms\Site_Model',
-            'foreign_key' => 'site_id',
-        ),
-    );
-}
 
 class Site_Model extends CMS_Model
 {
     protected $_table = 'cms_site';
     protected $_site_id    = '';
     protected $_site_model = '';
-    protected $_columns = ['code'];
+    protected $_columns = ['code', 'super_user_id'];
     protected $_unique_columns = ['code'];
 
     protected $real_old_site_code = NULL;
 
+    protected $_parents = array(
+        'super_admin' => array(
+            'model' => '\Modules\Cms\Models\User_Model',
+            'foreign_key' => 'super_user_id',
+        )
+    );
+
     protected $_children = array(
         'aliases' => array(
-            'model' => '\Modules\Cms\Site_Alias_Model',
+            'model' => '\Modules\Cms\Models\Site_Alias_Model',
             'foreign_key' => 'site_id',
         )
     );

@@ -45,8 +45,8 @@ function show_help($amigo_name)
         $class_parts = explode('.', $class);
         $class = $class_parts[0];
         $obj =  new $class();
-        $description = $obj->description;
-        $parameter = $obj->parameter;
+        $description = property_exists($obj, 'description')? $obj->description : '';
+        $parameter = property_exists($obj, 'parameter')? $obj->parameter : '';
         $command = lcfirst($class);
         $message .= "* $description" . PHP_EOL;
         $message .= "   php $amigo_name $command $parameter".PHP_EOL;
@@ -64,7 +64,7 @@ else if($argc == 2 && $argv[1] == "?")
     outln(" Do you just ask `Am I Go?`");
     outln(" No, you are not, I don't know who you are. And I'm not `Go` too. I am Amigo, a simple PHP CLI program.");
     outln(" `Go` is the programmer who made me.");
-    outln(" You can stalk his github on https://github.com/goFrendiAsgard");
+    outln(" You can stalk his github on https://github.com/goFrendiAsgard" . PHP_EOL);
     show_help($argv[0]);
 }
 else if($argc > 1)
@@ -89,6 +89,6 @@ else if($argc > 1)
 }
 else
 {
-    outln("This should never be shown, but in case it is, please run away, zombie apocalypse will come very soon");
+    outln("This should never be shown, but in case it is, please run away, zombie apocalypse will be happened very soon");
 }
 

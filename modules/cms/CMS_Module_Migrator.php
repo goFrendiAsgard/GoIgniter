@@ -1,7 +1,7 @@
 <?php
 namespace Modules\Cms;
 use \Site;
-use \Modules\Cms\Site_Model;
+use \Modules\Cms\Models\Site_Model;
 
 class CMS_Module_Migrator extends \Module_Migrator 
 {

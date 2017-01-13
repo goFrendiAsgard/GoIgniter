@@ -32,7 +32,8 @@ class Migration_Init_cms extends CMS_Migration {
         // site
         $this->add_cms_default_fields();
         $this->add_field(array(
-            'code'      => $this->TYPE_VARCHAR_255,
+            'code'          => $this->TYPE_VARCHAR_255,
+            'super_user_id' => $this->TYPE_FOREIGN_KEY,
         ));
         $this->create_table('cms_site');
 
@@ -47,6 +48,7 @@ class Migration_Init_cms extends CMS_Migration {
         $this->add_cms_general_default_fields();
         $this->add_field(array(
             'module_id' => $this->TYPE_FOREIGN_KEY,
+            'site_id'   => $this->TYPE_FOREIGN_KEY,
         ));
         $this->create_table('cms_site_module');
 
@@ -65,7 +67,7 @@ class Migration_Init_cms extends CMS_Migration {
         $this->add_cms_default_fields();
         $this->add_field(array(
             'module_id'     => $this->TYPE_FOREIGN_KEY,
-            'group_name'    => $this->TYPE_VARCHAR_255,
+            'code'    => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_group');
 
@@ -115,6 +117,8 @@ class Migration_Init_cms extends CMS_Migration {
             'route_to'              => $this->TYPE_VARCHAR_255_NULL,
             'content'               => $this->TYPE_VARCHAR_255_NULL,
             'content_config_id'     => $this->TYPE_FOREIGN_KEY,
+            'static_content'        => $this->TYPE_VARCHAR_255_NULL,
+            'static_content_config_id' => $this->TYPE_FOREIGN_KEY,
             'module_id'             => $this->TYPE_FOREIGN_KEY,
             'layout_id'             => $this->TYPE_FOREIGN_KEY,
             'authenticated'         => $this->TYPE_TINYINT_UNSIGNED_10,
@@ -134,7 +138,7 @@ class Migration_Init_cms extends CMS_Migration {
         // navigation
         $this->add_cms_default_fields();
         $this->add_field(array(
-            'name'          => $this->TYPE_VARCHAR_255,
+            'code'          => $this->TYPE_VARCHAR_255,
             'content_id'    => $this->TYPE_FOREIGN_KEY,
             'parent_id'     => $this->TYPE_FOREIGN_KEY,
         ));

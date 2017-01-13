@@ -8,8 +8,8 @@ abstract class CMS_Model extends Go_Model
     protected $_updated_by = 'updated_by';
     protected $_deleted_by = 'deleted_by';
     protected $_site_id    = 'site_id';
-    protected $_user_model = '\Modules\Cms\User_Model';
-    protected $_site_model = '\Modules\Cms\Site_Model';
+    protected $_user_model = '\Modules\Cms\Models\User_Model';
+    protected $_site_model = '\Modules\Cms\Models\Site_Model';
 
     public function __construct($obj=array(), $db = NULL)
     {

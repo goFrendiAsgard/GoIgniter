@@ -11,11 +11,11 @@ use \Site;
 use \Go_Migration;
 use \Module_Migrator;
 use \Modules\Cms\Mutator;
-use \Modules\Cms\Site_Model;
-use \Modules\Cms\User_Model;
 use \Modules\Cms\Test_Controller;
 use \Modules\Cms\CMS_Module_Migrator;
 use \Modules\Cms\Models\Genesis;
+use \Modules\Cms\Models\Site_Model;
+use \Modules\Cms\Models\User_Model;
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -698,60 +698,61 @@ class Test extends Test_Controller
     }
 
     function test_orm_many_to_many()
-    {
-        $pandu = new Full_Test_Node(array(
-            'code' => 'pandu',
-            'wife' => array(
-                array('code' => 'kunthi'),
-                array('code' => 'madri'),
-            ),
+    {            
+        // initiate arjuna with a wife
+        $ulupi = new Full_Test_Node(array('code' => 'ulupi'));
+        $arjuna = new Full_Test_Node(array(
+            'code' => 'arjuna',
+            'wife' => array($ulupi), 
         ));
-        $kunthi = $pandu->wife[0];
-        $madri = $pandu->wife[1];
+        $bhima = new Full_Test_Node(array('code' => 'bhima'));
+        $draupadi = new Full_Test_Node(array('code' => 'draupadi'));
+        $subadhra = new Full_Test_Node(array('code' => 'subadhra'));
 
-        // test relationship between pandu, kunthi, and madri
-        $expected_result = 'kunthi';
-        $test = $pandu->wife[0]->code;
-        $this->unit->run($test, $expected_result, 'First wife of pandu should be kunthi');
+        // add and remove many to many relation
+        $arjuna->add_wife($draupadi);
+        $arjuna->add_wife($subadhra);
 
-        $expected_result = 'madri';
-        $test = $pandu->wife[1]->code;
-        $this->unit->run($test, $expected_result, 'Second wife of pandu should be madri');
+        $draupadi->add_husband($bhima);
 
-        $expected_result = 'pandu';
-        $test = $kunthi->husband[0]->code;
-        $this->unit->run($test, $expected_result, 'First husband of kunthi should be pandu');
+        // draupadi is connected to arjuna and bhima, so this should save all node
+        $draupadi->save();
 
-        $expected_result = 'pandu';
-        $test = $madri->husband[0]->code;
-        $this->unit->run($test, $expected_result, 'First husband of madri should be pandu');
-
-        // save to database
-        $pandu->save();
-
-        // create new node "surya"
-        $surya = new Full_Test_Node(array('code' => 'surya'));
-
-        $kunthi->add_husband($surya);
-        $expected_result = 'surya';
-        $test = $kunthi->husband[1]->code;
-        $this->unit->run($test, $expected_result, 'Second husband of kunthi should be surya');
-
-        $kunthi->remove_husband($pandu);
-        $expected_result = 1;
-        $test = count($kunthi->husband);
-        $this->unit->run($test, $expected_result, 'pandu is removed, kunthi\'s husband is now only one');
-
-        $kunthi->add_husband($pandu);
         $expected_result = 2;
-        $test = count($kunthi->husband);
-        $this->unit->run($test, $expected_result, 'pandu is re-added, kunthi\'s husband is now two again');
+        $test = count($draupadi->husband);
+        $this->unit->run($test, $expected_result, 'draupadi should have 2 husbands');
 
-        $kunthi->save();
+        $expected_result = 1;
+        $test = count($bhima->wife);
+        $this->unit->run($test, $expected_result, 'bhima should has 1 wife');
+
+        $expected_result = 3;
+        $test = count($arjuna->wife);
+        $this->unit->run($test, $expected_result, 'arjuna should has 3 wives');
+
+        $arjuna->remove_wife($ulupi);
+
+        $expected_result = 2;
+        $test = count($arjuna->wife);
+        $this->unit->run($test, $expected_result, 'ulupi removed from arjuna\'s wife he should only has 2 wives');
+
+        $expected_result = 0;
+        $test = count($ulupi->husband);
+        $this->unit->run($test, $expected_result, 'ulupi doesn\'t have husband');
+
+        $expected_result = 1;
+        $test = count($subadhra->husband);
+        $this->unit->run($test, $expected_result, 'subadhra has one husband');
+
+        $expected_result = 'draupadi';
+        $test = $arjuna->wife[0]->code;
+        $this->unit->run($test, $expected_result, 'first wife of arjuna is now draupadi');
+
         $expected_result = 3;
         $test = $this->db->get_where('test_node_marriage', array('deleted' => 0))->num_rows();
         $notes = var_export($this->db->get('test_node_marriage')->result(), TRUE);
-        $this->unit->run($test, $expected_result, 'there should be three pivot table in the database', $notes);
+        $this->unit->run($test, $expected_result, 'there should be three pivot record in the database', $notes);
+
     }
 
     function test_orm_child_manipulation()

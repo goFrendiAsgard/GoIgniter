@@ -1,6 +1,7 @@
 <?php
-namespace Modules\Cms;
+namespace Modules\Cms\Models;
 use \Modules\Cms\CMS_Model;
+use \Modules\Cms\Models\Group_Model;
 
 class User_Model extends CMS_Model 
 {
@@ -9,6 +10,13 @@ class User_Model extends CMS_Model
     protected $_site_model = '';
     protected $_columns    = ['user_name', 'hashed_password', 'api_session_code', 'email', 'first_name', 'last_name', 'birthday', 'profile_picture', 'description', 'last_login', 'active'];
     protected $_unique_columns = ['user_name'];
+
+    protected $_children = array(
+        'managed_site' => array(
+            'model' => '\Modules\Cms\Models\Site_Model',
+            'foreign_key' => 'super_user_id',
+        ),
+    );
 
     public $active = TRUE; // default value
 
@@ -59,9 +67,20 @@ class User_Model extends CMS_Model
         // we can login by user_name, email, or api_session_code
         $user_list = array();
         $where_list = array(
-            array('user_name' => $identity, 'hashed_password' => static::hash($password)),
-            array('email' => $identity, 'hashed_password' => static::hash($password)),
-            array('api_session_code' => $identity),
+            array(
+                'user_name' => $identity,
+                'hashed_password' => static::hash($password),
+                'active' => TRUE
+            ),
+            array(
+                'email' => $identity, 
+                'hashed_password' => static::hash($password), 
+                'active' => TRUE
+            ),
+            array(
+                'api_session_code' => $identity,
+                'active' => TRUE
+            ),
         );
 
         // check from each where condition
