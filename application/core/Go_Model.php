@@ -8,29 +8,29 @@ abstract class Go_Model extends CI_Model
     //
     ////////////////////////////////////////////////////////////////
 
-    protected $_table           = '';
-    protected $_id              = 'id';
-    protected $_created_at      = 'created_at';
-    protected $_deleted_at      = 'deleted_at';
-    protected $_updated_at      = 'updated_at';
-    protected $_deleted         = 'deleted';
-    protected $_columns         = array();
-    protected $_unique_columns  = array();
-    protected $_turn_off_cache  = FALSE;
+    protected $_table             = '';
+    protected $_id                = 'id';
+    protected $_created_at        = 'created_at';
+    protected $_deleted_at        = 'deleted_at';
+    protected $_updated_at        = 'updated_at';
+    protected $_deleted           = 'deleted';
+    protected $_columns           = array();
+    protected $_unique_columns    = array();
+    protected $_turn_off_cache    = FALSE;
     
     // array of associative array. Each child should has these keys:
     // "model", "foreign_key", "on_delete", and "on_purge".
     // on_delete & on_purge can be "restrict", "cascade", and "set_null"
-    protected $_children        = array();
+    protected $_children          = array();
 
     // array of associative array. Each child should has these keys:
     // "model", "foreign_key", "on_delete".
-    protected $_parents         = array();
+    protected $_parents           = array();
 
     // array of associative array. Each child should has these keys:
     // "pivot_model", "model", "backref_relation", "on_delete", and "on_purge".
     // on_delete & on_purge can be "restrict", "cascade", and "set_null"
-    protected $_many_to_many    = array();
+    protected $_many_to_many      = array();
 
     protected function before_save   (&$success, &$error_message){}
     protected function after_save    (&$success, &$error_message){}
@@ -256,7 +256,16 @@ abstract class Go_Model extends CI_Model
                         $real_parent = $class::find_by_id($this->_values[$foreign_key]);
                         if($real_parent != NULL)
                         {
+                            // save old modification flag
+                            $modified = $this->_modified;
+                            $parent_modified = $real_parent->_modified;
+
+                            // build relationship
                             $this->_set_parent($key, $real_parent);
+
+                            // set modification flag
+                            $this->_modified = $modified;
+                            $real_parent->_modified = $parent_modified;
                         }
                     }
                 }
@@ -304,7 +313,16 @@ abstract class Go_Model extends CI_Model
                             }
                             if(!in_array($real_child->_values[$child_pk], $current_children_id_list))
                             {
+                                // save old modification flag
+                                $modified = $this->_modified;
+                                $child_modified = $real_child->_modified;
+
+                                // build relationship
                                 $real_child->_set_parent($alias, $this);
+
+                                // set modification flag
+                                $this->_modified = $modified;
+                                $real_child->_modified = $child_modified;
                             }
                         }
                         break;
@@ -705,7 +723,6 @@ abstract class Go_Model extends CI_Model
                 'on_purge' => $many_to_many_config['on_purge']
             );
         }
-
     }
 
     public function __construct($obj=array(), $db = NULL)
@@ -1378,8 +1395,7 @@ abstract class Go_Model extends CI_Model
     public static function reset_cache()
     {
         static::_activate_cache();
-        $class = get_called_class();
-
+        $class = get_called_class(); 
         self::$_cached_result[$class] = array();
         self::$_is_cached[$class] = FALSE;
         if(!array_key_exists($class, self::$_is_cachable) || self::$_is_cachable[$class] !== FALSE)

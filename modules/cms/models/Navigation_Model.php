@@ -11,11 +11,11 @@ class Navigation_Model extends CMS_Model
 
     protected $_parents = array(
         'content' => array(
-            'model' => '\Modules\Cms\Models\Content_Model',
+            'model' => __NAMESPACE__.'\Content_Model',
             'foreign_key' => 'content_id',
         ),
         'parent' => array(
-            'model' => '\Modules\Cms\Models\Navigation_Model',
+            'model' => __NAMESPACE__.'\Navigation_Model',
             'foreign_key' => 'parent_id',
         )
     );

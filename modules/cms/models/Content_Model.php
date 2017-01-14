@@ -13,19 +13,19 @@ class Content_Model extends CMS_Model
 
     protected $_parents = array(
         'module' => array(
-            'model' => '\Modules\Cms\Models\Module_Model',
+            'model' => __NAMESPACE__.'\Module_Model',
             'foreign_key' => 'module_id',
         ),
         'content_default_config' => array(
-            'model' => '\Modules\Cms\Models\Config_Model',
+            'model' => __NAMESPACE__.'\Config_Model',
             'foreign_key' => 'content_config_id',
         ),
         'static_content_default_config' => array(
-            'model' => '\Modules\Cms\Models\Config_Model',
+            'model' => __NAMESPACE__.'\Config_Model',
             'foreign_key' => 'static_content_config_id',
         ),
         'layout' => array(
-            'model' => '\Modules\Cms\Models\Layout_Model',
+            'model' => __NAMESPACE__.'\Layout_Model',
             'foreign_key' => 'layout_id',
         ),
     );

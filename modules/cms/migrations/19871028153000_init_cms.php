@@ -22,14 +22,14 @@ class Migration_Init_cms extends CMS_Migration {
         ));
         $this->create_table('test_node_marriage');
 
-        // module
+        // module: List of registered cms modules
         $this->add_cms_default_fields();
         $this->add_field(array(
             'code'      => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_module');
 
-        // site
+        // site: List of registered sites
         $this->add_cms_default_fields();
         $this->add_field(array(
             'code'          => $this->TYPE_VARCHAR_255,
@@ -37,14 +37,14 @@ class Migration_Init_cms extends CMS_Migration {
         ));
         $this->create_table('cms_site');
 
-        // site_alias
+        // site_alias: alias of the registered sites
         $this->add_cms_default_fields();
         $this->add_field(array(
             'alias'     => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_site_alias');
 
-        // site_module
+        // site_module: flag, whether a module is available for a site or not. Main site has everything in cms_module accessible
         $this->add_cms_general_default_fields();
         $this->add_field(array(
             'module_id' => $this->TYPE_FOREIGN_KEY,
@@ -59,7 +59,9 @@ class Migration_Init_cms extends CMS_Migration {
             'type'          => $this->TYPE_VARCHAR_255_NULL,
             'key'           => $this->TYPE_VARCHAR_255_NULL,
             'value'         => $this->TYPE_VARCHAR_255_NULL,
+            'default_value' => $this->TYPE_VARCHAR_255_NULL,
             'json_options'  => $this->TYPE_VARCHAR_255_NULL,
+            'description'   => $this->TYPE_TEXT_NULL,
         ));
         $this->create_table('cms_config');
 

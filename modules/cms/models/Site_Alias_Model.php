@@ -13,7 +13,7 @@ class Site_Alias_Model extends CMS_Model
 
     protected $_parents = array(
         'site' => array(
-            'model' => '\Modules\Cms\Models\Site_Model',
+            'model' => __NAMESPACE__.'\Site_Model',
             'foreign_key' => 'site_id',
         )
     );

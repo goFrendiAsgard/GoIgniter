@@ -13,7 +13,7 @@ class User_Model extends CMS_Model
 
     protected $_children = array(
         'managed_site' => array(
-            'model' => '\Modules\Cms\Models\Site_Model',
+            'model' => __NAMESPACE__.'\Site_Model',
             'foreign_key' => 'super_user_id',
         ),
     );

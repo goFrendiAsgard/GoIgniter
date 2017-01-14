@@ -3,6 +3,7 @@ namespace Modules\Cms\Models;
 use \Modules\Cms\CMS_Model;
 use \Modules\Cms\Models\User_Model;
 use \Modules\Cms\Models\Site_Alias_Model;
+use \Modules\Cms\Models\Site_Module_Model;
 use \Site;
 
 class Site_Model extends CMS_Model
@@ -17,15 +18,23 @@ class Site_Model extends CMS_Model
 
     protected $_parents = array(
         'super_admin' => array(
-            'model' => '\Modules\Cms\Models\User_Model',
+            'model' => __NAMESPACE__.'\User_Model',
             'foreign_key' => 'super_user_id',
         )
     );
 
     protected $_children = array(
         'aliases' => array(
-            'model' => '\Modules\Cms\Models\Site_Alias_Model',
+            'model' => __NAMESPACE__.'\Site_Alias_Model',
             'foreign_key' => 'site_id',
+        )
+    );
+
+    protected $_many_to_many = array(
+        'modules' => array(
+            'pivot_model' => __NAMESPACE__.'\Site_Module_Model',
+            'relation' => 'module',
+            'backref_relation' => 'site',
         )
     );
 

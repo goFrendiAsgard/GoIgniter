@@ -12,11 +12,11 @@ class User_Group_Model extends CMS_Model
 
     protected $_parents = array(
         'group' => array(
-            'model' => '\groups\Cms\Models\Group_Model',
+            'model' => __NAMESPACE__.'\Group_Model',
             'foreign_key' => 'group_id',
         ),
         'user' => array(
-            'model' => '\groups\Cms\Models\User_Model',
+            'model' => __NAMESPACE__.'\User_Model',
             'foreign_key' => 'user_id',
         ),
     );

@@ -12,11 +12,11 @@ class Content_Group_Model extends CMS_Model
 
     protected $_parents = array(
         'group' => array(
-            'model' => '\groups\Cms\Models\Group_Model',
+            'model' => __NAMESPACE__.'\Group_Model',
             'foreign_key' => 'group_id',
         ),
         'content' => array(
-            'model' => '\groups\Cms\Models\Content_Model',
+            'model' => __NAMESPACE__.'\Content_Model',
             'foreign_key' => 'content_id',
         ),
     );

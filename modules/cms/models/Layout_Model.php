@@ -12,19 +12,19 @@ class Layout_Model extends CMS_Model
 
     protected $_parents = array(
         'module' => array(
-            'model' => '\Modules\Cms\Models\Module_Model',
+            'model' => __NAMESPACE__.'\Module_Model',
             'foreign_key' => 'module_id',
         ),
         'default_template_config' => array(
-            'model' => '\Modules\Cms\Models\Config_Model',
+            'model' => __NAMESPACE__.'\Config_Model',
             'foreign_key' => 'template_config_id',
         ),
         'default_parent_name_config' => array(
-            'model' => '\Modules\Cms\Models\Config_Model',
+            'model' => __NAMESPACE__.'\Config_Model',
             'foreign_key' => 'parent_name_config_id',
         ),
         'parent' => array(
-            'model' => '\Modules\Cms\Models\Layout_Model',
+            'model' => __NAMESPACE__.'\Layout_Model',
             'foreign_key' => 'parent_id',
         )
     );

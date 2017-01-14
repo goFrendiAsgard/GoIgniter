@@ -60,7 +60,7 @@ class Full_Test_Node extends \Go_Model
 
     protected $_children = array(
         'children' => array(
-            'model' => 'Modules\Cms\Controllers\Full_Test_Node',
+            'model' => __NAMESPACE__.'\Full_Test_Node',
             'foreign_key' => 'parent_id',
             'on_delete' => 'set_null', // restrict, cascade, set_null
             'on_purge' => 'set_null', // restric, cascade, set_null
@@ -69,20 +69,20 @@ class Full_Test_Node extends \Go_Model
 
     protected $_parents = array(
         'parent' => array(
-            'model' => 'Modules\Cms\Controllers\Full_Test_Node',
+            'model' => __NAMESPACE__.'\Full_Test_Node',
             'foreign_key' => 'parent_id',
         ),
     );
 
     protected $_many_to_many = array(
         'wife' => array(
-            'pivot_model' => 'Modules\Cms\Controllers\Test_Node_Marriage',
+            'pivot_model' => __NAMESPACE__.'\Test_Node_Marriage',
             'backref_relation' => 'husband',
             'relation' => 'wife',
             'on_delete' => 'set_null',
         ),
         'husband' => array(
-            'pivot_model' => 'Modules\Cms\Controllers\Test_Node_Marriage',
+            'pivot_model' => __NAMESPACE__.'\Test_Node_Marriage',
             'backref_relation' => 'wife',
             'relation' => 'husband',
             'on_delete' => 'set_null',
@@ -971,6 +971,17 @@ class Test extends Test_Controller
         $test = $employee->creator->user_name;
         $expected_result = 'admin';
         $this->unit->run($test, $expected_result, 'Employee\'s creator should be admin');
+
+        $mere_user = new User_Model(array(
+            'user_name' => 'mere_user',
+            'email' => 'mereUser@email.com',
+            'password' => 'mere_user'
+        ));
+        $mere_user->save();
+
+        $test = $this->db->count_all('cms_user');
+        $expected_result = 3;
+        $this->unit->run($test, $expected_result, 'User \'mere_user\' created, there should be three users in the table');
 
     }
 
