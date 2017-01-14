@@ -5,7 +5,7 @@ use \Modules\Cms\Models\Content_Model;
 
 class Navigation_Model extends CMS_Model
 {
-    protected $_table = 'cms_layout';
+    protected $_table = 'cms_navigation';
     protected $_columns = ['code', 'content_id', 'parent_id'];
     protected $_unique_columns = ['code'];
 

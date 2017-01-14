@@ -16,6 +16,12 @@ use \Modules\Cms\CMS_Module_Migrator;
 use \Modules\Cms\Models\Genesis;
 use \Modules\Cms\Models\Site_Model;
 use \Modules\Cms\Models\User_Model;
+use \Modules\Cms\Models\Group_Model;
+use \Modules\Cms\Models\Config_Model;
+use \Modules\Cms\Models\Content_Model;
+use \Modules\Cms\Models\Layout_Model;
+use \Modules\Cms\Models\Module_Model;
+use \Modules\Cms\Models\Navigation_Model;
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -998,6 +1004,68 @@ class Test extends Test_Controller
         $expected_result = 3;
         $this->unit->run($test, $expected_result, 'User \'mere_user\' created, there should be three users in the table');
 
+    }
+
+    function test_module_model()
+    {
+        $module = new Module_Model('cms');
+        $module->save();
+
+        $expected_result = 'cms';
+        $test = $module->code;
+        $this->unit->run($test, $expected_result, 'Test create module');
+    }
+
+    function test_group_model()
+    {
+        $group = new Group_Model('my_group');
+        $group->save();
+
+        $expected_result = 'my_group';
+        $test = $group->code;
+        $this->unit->run($test, $expected_result, 'Test create group');
+    }
+
+    function test_config_model()
+    {
+        $config = new Config_Model('my_config');
+        $config->save();
+
+        $expected_result = 'my_config';
+        $test = $config->key;
+        $this->unit->run($test, $expected_result, 'Test create config');
+    }
+
+    function test_layout_model()
+    {
+        $layout = new Layout_Model('my_layout');
+        $layout->save();
+
+        $expected_result = 'my_layout';
+        $test = $layout->code;
+        $this->unit->run($test, $expected_result, 'Test create layout');
+    }
+
+    function test_content_model()
+    {
+        $content = new Content_Model('my_content');
+        $content->route_key = '/';
+        $content->save();
+
+        $expected_result = 'my_content';
+        $test = $content->code;
+        $this->unit->run($test, $expected_result, 'Test create content');
+    }
+
+    function test_navigation_model()
+    {
+        $content = Content_Model::find_by_id(1);
+        $navigation = new Navigation_Model(array('code' => 'my_navigation', 'content' => $content));
+        $navigation->save();
+
+        $expected_result = '1';
+        $test = $navigation->content_id;
+        $this->unit->run($test, $expected_result, 'Test create navigation');
     }
 
     function test_site_model()

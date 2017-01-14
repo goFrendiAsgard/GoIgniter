@@ -9,8 +9,13 @@ use \Modules\Cms\Models\Content_Group_Model;
 class Content_Model extends CMS_Model
 {
     protected $_table = 'cms_content';
-    protected $_columns = ['module_id', 'code', 'route_key', 'is_static', 'route_to', 'content', 'content_config_id', 'static_content', 'static_content_config_id', 'layout_id', 'authenticated', 'is_crucial'];
+    protected $_columns = ['module_id', 'code', 'route_key', 'is_static', 'route_to', 'content', 'content_config_id', 'static_content', 'static_content_config_id', 'layout_id', 'authenticated', 'unauthenticated', 'is_crucial'];
     protected $_unique_columns = ['code'];
+
+    public $authenticated = TRUE;
+    public $unauthenticated = TRUE;
+    public $is_crucial = FALSE;
+    public $is_static = TRUE;
 
     protected $_parents = array(
         'module' => array(

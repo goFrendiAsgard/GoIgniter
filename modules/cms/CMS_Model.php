@@ -65,7 +65,7 @@ abstract class CMS_Model extends Go_Model
         {
             if($this->__get('site') === NULL)
             {
-                $current_site =& $this->_site_model::get_current_site();
+                $current_site = $this->_site_model::get_current_site();
                 $this->__set('site', $current_site);
             }
         }
