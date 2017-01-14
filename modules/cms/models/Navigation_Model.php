@@ -1,5 +1,5 @@
 <?php
-namespace Modules\Cms\Models\Models;
+namespace Modules\Cms\Models;
 use \Modules\Cms\CMS_Model;
 use \Modules\Cms\Models\Content_Model;
 

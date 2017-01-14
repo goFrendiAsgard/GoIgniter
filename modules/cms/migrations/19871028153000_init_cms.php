@@ -23,14 +23,14 @@ class Migration_Init_cms extends CMS_Migration {
         $this->create_table('test_node_marriage');
 
         // module: List of registered cms modules
-        $this->add_cms_default_fields();
+        $this->add_cms_general_default_fields();
         $this->add_field(array(
             'code'      => $this->TYPE_VARCHAR_255,
         ));
         $this->create_table('cms_module');
 
         // site: List of registered sites
-        $this->add_cms_default_fields();
+        $this->add_cms_general_default_fields();
         $this->add_field(array(
             'code'          => $this->TYPE_VARCHAR_255,
             'super_user_id' => $this->TYPE_FOREIGN_KEY,

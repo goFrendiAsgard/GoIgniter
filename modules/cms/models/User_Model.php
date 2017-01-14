@@ -1,7 +1,7 @@
 <?php
 namespace Modules\Cms\Models;
 use \Modules\Cms\CMS_Model;
-use \Modules\Cms\Models\Group_Model;
+use \Modules\Cms\Models\User_Group_Model;
 
 class User_Model extends CMS_Model 
 {
@@ -15,6 +15,14 @@ class User_Model extends CMS_Model
         'managed_site' => array(
             'model' => __NAMESPACE__.'\Site_Model',
             'foreign_key' => 'super_user_id',
+        ),
+    );
+
+    protected $_many_to_many = array(
+        'groups' => array(
+            'pivot_model' => __NAMESPACE__.'\User_Group_Model',
+            'relation' => 'group',
+            'backref_relation' => 'user',
         ),
     );
 

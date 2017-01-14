@@ -666,7 +666,7 @@ class Test extends Test_Controller
 
         // Test add grand parent
         $ned = Full_Test_Node::find_by_id(2);
-        $ned->parent->parent = new Test_Node(array('code'=>'Edwyle Stark'));
+        $ned->parent->parent = new Test_Node('Edwyle Stark');
         $ned->save();
 
         $test = $this->db->count_all('test_node');
@@ -681,6 +681,14 @@ class Test extends Test_Controller
         $expected_result = FALSE;
         $test = $save_result['success'];
         $this->unit->run($test, $expected_result, '$other_ned->save(); should return array which success key if FALSE', $notes);
+
+        $expected_result = 'Code : Ned Stark - Parent Id : 1 - Child Count : 4';
+        $test = $ned->as_string();
+        $this->unit->run($test, $expected_result, '$ned->as_string()');
+
+        $expected_result = 'Ned Stark';
+        $test = $ned->as_short_string();
+        $this->unit->run($test, $expected_result, '$ned->as_short_string()');
     }
 
 
@@ -695,6 +703,13 @@ class Test extends Test_Controller
         $notes = var_export($db->get('test_node')->result(), TRUE);
         $this->unit->run($test, $expected_result, 'Test_Node::find_by_id(1) should give Rickard Stark', $notes);
 
+        $expected_result = 'Created By :  - Updated By :  - Deleted By :  - Site Id :  - Code : Rickard Stark - Parent Id : 8 - Child Count : 1';
+        $test = $test_node->as_string();
+        $this->unit->run($test, $expected_result, '$test_node->as_string()');
+
+        $expected_result = '1';
+        $test = $test_node->as_short_string();
+        $this->unit->run($test, $expected_result, '$test_node->as_short_string()');
     }
 
     function test_orm_many_to_many()

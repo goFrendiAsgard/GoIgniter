@@ -545,6 +545,25 @@ You can use the model like this:
     var_dump($user->password); // should give you 'PASSWORD SET'
 ```
 
+# ORM Trivia
+
+If you have exactly one unique columns (defined by using `$_unique_columns` property), you can pass a `string` to the constructor.
+
+```php
+    class Test_Node extends \Go_Model
+    {
+        protected $_unique_columns = ['code'];
+    }
+
+    $node = new Test_Node('Test');
+    var_dump($node->code); // should give you 'Test'
+```
+
+The following methods are also available and can be overridden as necessary:
+
+* `as_array()`
+* `as_string()`
+* `as_short_string()`
 
 # Always loaded functions
 

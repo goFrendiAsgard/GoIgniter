@@ -126,7 +126,7 @@ abstract class Go_Model extends CI_Model
             $new_data = $data->as_array();
         }
         // array and other datatype
-        else
+        else if(!is_string($data))
         {
             $new_data = (array) $data;
         }
@@ -761,6 +761,20 @@ abstract class Go_Model extends CI_Model
             }
         }
 
+        // if obj is string and we only have one unique column, let turn it into associative array with unique column as key and obj as val
+        if(is_string($obj))
+        {
+            if(count($this->_unique_columns) == 1)
+            {
+                $unique_column = $this->_unique_columns[0];
+                $obj = array($unique_column => $obj);
+            }
+            else
+            {
+                $obj = array();
+            }
+        }
+
         // assign properties
         foreach($obj as $key=>$val)
         {
@@ -806,6 +820,52 @@ abstract class Go_Model extends CI_Model
             }
         }
         return $array;
+    }
+
+    public function as_string()
+    {
+        if(count($this->_columns) > 0)
+        {
+            // get properties of the object
+            $properties = get_object_vars($this);
+            // forbidden columns are usually defined in underscored properties (such as $_id, $_created_by, etc)
+            $forbidden_columns = array();
+            foreach($properties as $key=>$val)
+            {
+                if(strpos($key, '_') === 0 && is_string($val))
+                {
+                    $forbidden_columns[] = $val;
+                }
+            }
+
+            // create the array
+            helper('inflector');
+            $array = array();
+            foreach($this->_columns as $col)
+            {
+                if(in_array($col, $forbidden_columns))
+                {
+                    continue;
+                }
+                $array[] = ucwords(humanize($col)) . ' : ' . $this->__get($col);
+            }
+            return implode(' - ', $array);
+        }
+        return $this->_get_id();
+    }
+
+    public function as_short_string()
+    {
+        if(count($this->_unique_columns) > 0)
+        {
+            $array = array();
+            foreach($this->_unique_columns as $col)
+            {
+                $array[] = $this->__get($col);
+            }
+            return implode(' - ', $array);
+        }
+        return $this->_get_id();
     }
 
     protected function _is_old_record()

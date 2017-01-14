@@ -1,9 +1,10 @@
 <?php
-namespace Modules\Cms\Models\Models;
+namespace Modules\Cms\Models;
 use \Modules\Cms\CMS_Model;
 use \Modules\Cms\Models\Layout_Model;
 use \Modules\Cms\Models\Config_Model;
 use \Modules\Cms\Models\Module_Model;
+use \Modules\Cms\Models\Content_Group_Model;
 
 class Content_Model extends CMS_Model
 {
@@ -27,6 +28,14 @@ class Content_Model extends CMS_Model
         'layout' => array(
             'model' => __NAMESPACE__.'\Layout_Model',
             'foreign_key' => 'layout_id',
+        ),
+    );
+
+    protected $_many_to_many = array(
+        'groups' => array(
+            'pivot_model' => __NAMESPACE__.'\Content_Group_Model',
+            'relation' => 'group',
+            'backref_relation' => 'content',
         ),
     );
 }
