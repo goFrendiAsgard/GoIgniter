@@ -712,8 +712,21 @@ class Test extends Test_Controller
         // add and remove many to many relation
         $arjuna->add_wife($draupadi);
         $arjuna->add_wife($subadhra);
-
         $draupadi->add_husband($bhima);
+
+        // test before save
+        $arjuna->remove_wife($ulupi);
+
+        $expected_result = 2;
+        $test = count($arjuna->wife);
+        $this->unit->run($test, $expected_result, 'arjuna should has 2 wives since ulupi has been removed temporary');
+
+        $expected_result = 0;
+        $test = count($ulupi->husband);
+        $this->unit->run($test, $expected_result, 'ulupi should has no husband');
+
+        // re-add ulupi to be removed later
+        $arjuna->add_wife($ulupi);
 
         // draupadi is connected to arjuna and bhima, so this should save all node
         $draupadi->save();

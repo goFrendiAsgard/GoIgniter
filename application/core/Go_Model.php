@@ -216,6 +216,7 @@ abstract class Go_Model extends CI_Model
                         if($child->__get($relation) == $virtual_child)
                         {
                             $child->_unset_parent($backref_relation);
+                            $child->_unset_parent($relation);
                             if($child->_get_id() != NULL)
                             {
                                 $child->delete();
@@ -442,68 +443,27 @@ abstract class Go_Model extends CI_Model
             $current_pk = $this->_get_id();
             $current_class_name = get_called_class();
 
-            // children 
-            if(array_key_exists($key, $this->_children))
+            // children & many to many
+            if(array_key_exists($key, $this->_children) || array_key_exists($key, $this->_many_to_many))
             {
-
-                $relation_config = $this->_children[$key];
-                $class_name = $relation_config['model'];
-                $foreign_key = $relation_config['foreign_key'];
-
-                $child_config = $class_name::_get_static_config();
-                $child_parent_config = $child_config['parents'];
-                $backref_relation = $this->_get_backref_relation($key, $class_name);
-                $backref_config = $child_parent_config[$backref_relation];
-
-
                 if(!isset($this->_values[$key]))
                 {
                     // assigned a new column, then this must be empty first 
                     $this->_values[$key] = array();
                 }
 
-                // The true config valid
-                if(trim($backref_config['model'], '\\') == trim($current_class_name, '\\') && $backref_config['foreign_key'] == $foreign_key)
+                // remove link from old children if the old children is no longer part of new children
+                foreach($this->_values[$key] as &$old_child)
                 {
-                    // remove link from old children if the old children is no longer part of new children
-                    foreach($this->_values[$key] as &$old_child)
+                    if($old_child != NULL)
                     {
-                        if($old_child != NULL)
-                        {
-                            $old_child->_unset_parent($backref_relation);
-                            if($this->_get_id() != NULL || $old_child->_get_id() != NULL)
-                            {
-                                $old_child->save();
-                            }
-                        }
-                    }
-
-                    // add new children
-                    foreach($val as &$child_data)
-                    {
-                        $new_child = $this->_data_to_entity($child_data, $class_name);
-                        if($new_child != NULL)
-                        {
-                            $new_child->_set_parent($backref_relation, $this);
-                            if($this->_get_id() != NULL || $new_child->_get_id() != NULL)
-                            {
-                                $new_child->save();
-                            }
-                        }
+                        $this->__call('remove_'.$key, array($old_child));
                     }
                 }
-                // Fallback, children doesn't have foreign key to parent
-                else
+                // add new children
+                foreach($val as &$child_data)
                 {
-                    foreach($val as $child_data)
-                    {
-                        $new_child = $this->_data_to_entity($child_data, $class_name);
-                        if($new_child != NULL)
-                        {
-                            $this->_values[$key][] = $new_child;
-                        }
-                    }
-
+                    $this->__call('add_'.$key, array($child_data));
                 }
 
                 // set _fetched children if it is not there
@@ -511,48 +471,6 @@ abstract class Go_Model extends CI_Model
                 {
                     $this->_fetched_children[] = $key;
                 }
-            }
-
-            // many to many
-            else if(array_key_exists($key, $this->_many_to_many))
-            {
-                // get real children
-                $child_key = $this->_get_real_pivot_child($key);
-                $children = $this->__get($child_key);
-
-                // get the config
-                $many_to_many_config = $this->_many_to_many[$key];
-                $relation = $many_to_many_config['relation'];
-                $backref_relation = $many_to_many_config['backref_relation'];
-                $pivot_class = $many_to_many_config['pivot_model'];
-                $pivot_config = $pivot_class::_get_static_config();
-                $virtual_child_class = $pivot_config['parents'][$relation]['model'];
-
-                // delete the old children
-                foreach($children as $old_child)
-                {
-                    // remove reference to this record
-                    $old_child->_unset_parent($pivot_config[$backref_relation]);
-
-                    // having id? delete it
-                    if($old_child->_get_id() !== NULL)
-                    {
-                        $old_child->delete();
-                    }
-                }
-
-                // add the new children
-                $new_children = array();
-                foreach($val as $virtual_child)
-                {
-                    $virtual_child = $this->_data_to_entity($virtual_child, $virtual_child_class);
-                    $child = new $pivot_class(array(), $this->db);
-                    $child->_set_parent($backref_relation, $this);
-                    $child->_set_parent($relation, $virtual_child);
-                    $new_children[] = $child;
-                }
-                $this->__set($child_key, $new_children);
-
             }
 
             // parents 
@@ -567,6 +485,7 @@ abstract class Go_Model extends CI_Model
                     $this->_set_parent($key, $val);
                 }
             }
+
             // true columns
             else
             {
