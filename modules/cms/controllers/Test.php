@@ -1014,6 +1014,8 @@ class Test extends Test_Controller
         $expected_result = 'cms';
         $test = $module->code;
         $this->unit->run($test, $expected_result, 'Test create module');
+
+        $module->delete();
     }
 
     function test_group_model()
@@ -1089,8 +1091,22 @@ class Test extends Test_Controller
 
     function test_site_model()
     {
+        // test registered model
+        $expected_result = 0;
+        $test = count(Site_Model::get_registered_modules());
+        $this->unit->run($test, $expected_result, 'At the beginning no module available on the site');
+
+        // Try to activate module
+        Site_Model::register_module('cms');
+
+        // test registered model
+        $expected_result = 1;
+        $test = count(Site_Model::get_registered_modules());
+        $this->unit->run($test, $expected_result, 'Module cms has just been added');
+
         // get cms_module (used for activation)
-        $cms_module = Module_Model::find_by_id(1);
+        $module_list = Site_Model::get_registered_modules();
+        $cms_module = $module_list[0];
 
         // delete all site
         $core_site = new Site();
@@ -1147,9 +1163,6 @@ class Test extends Test_Controller
 
         $_SERVER['SERVER_NAME'] = $old_server_name;
 
-
-        // Try to activate module
-        Site_Model::register_module($cms_module);
     }
 
     function test_cms_module_migrator()

@@ -78,6 +78,7 @@ class Site_Model extends CMS_Model
         }
     }
 
+    // module can be string or object
     public static function is_module_registered($module)
     {
         foreach(static::get_registered_modules() as $registered_module)
@@ -90,9 +91,23 @@ class Site_Model extends CMS_Model
         return FALSE;
     }
 
+    // module can be string or object
     public static function register_module($module, $db = NULL)
     {
+        // if $module is string, try to get from database
+        if(is_string($module))
+        {
+            $module_list = Module_Model::find_where(array('deleted' => FALSE, 'code' => $module));
+            if(count($module_list) > 0)
+            {
+                $module = $module_list[0];
+            }
+        }
+
+        // if $module is array, change it into object
         $module = static::data_to_entity($module, '\Modules\Cms\Models\Module_Model', $db);
+
+        // if module is not registered, register it
         if(!static::is_module_registered($module))
         {
             $current_site = static::get_current_site();

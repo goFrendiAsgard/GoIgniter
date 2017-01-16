@@ -103,7 +103,7 @@ abstract class CMS_Model extends Go_Model
         {
             if($this->__get('deleter') === NULL)
             {
-                $current_user =& $this->_user_model::get_current_user();
+                $current_user = $this->_user_model::get_current_user();
                 $this->__set('deleter', $current_user);
             }
         }

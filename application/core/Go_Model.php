@@ -745,6 +745,10 @@ abstract class Go_Model extends CI_Model
                 $obj = array();
             }
         }
+        else if(!is_array($obj))
+        {
+            $obj = (array) $obj;
+        }
 
         // assign properties
         foreach($obj as $key=>$val)
@@ -895,6 +899,12 @@ abstract class Go_Model extends CI_Model
                 $value_information[] = $col . ' : ' . $this->__get($col);
             }
             $value_information = implode(', ', $value_information);
+
+            // if record has been deleted, don't compare it
+            if($this->_deleted != '')
+            {
+                $where[$this->_deleted] = FALSE;
+            }
 
             // get the duplicated records
             $class = get_called_class();
@@ -1315,7 +1325,7 @@ abstract class Go_Model extends CI_Model
             if($success)
             {
                 $simple_array[$pk_field] = $pk;
-                $class::override_cached_record($simple_array);
+                $class::purge_cached_record($pk);
             }
         }
 
@@ -1420,7 +1430,11 @@ abstract class Go_Model extends CI_Model
             $new_data = $data->as_array();
         }
         // array and other datatype
-        else if(!is_string($data))
+        else if(is_string($data))
+        {
+            $new_data = $data;
+        }
+        else
         {
             $new_data = (array) $data;
         }
