@@ -1,14 +1,17 @@
 <?php
 namespace Modules\Cms\Models;
-use \Modules\Cms\CMS_Model;
+use \Modules\Cms\CMS_Historical_Model;
 use \Modules\Cms\Models\Module_Model;
 use \Modules\Cms\Models\Config_Model;
 
-class Layout_Model extends CMS_Model
+class Layout_Model extends CMS_Historical_Model
 {
     protected $_table = 'cms_layout';
     protected $_columns = ['module_id', 'code', 'template', 'parent_id'];
     protected $_unique_columns = ['code'];
+
+    protected $_history_foreign_key = 'layout_id';
+    protected $_history_columns = ['template', 'parent_id'];
 
     protected $_parents = array(
         'module' => array(

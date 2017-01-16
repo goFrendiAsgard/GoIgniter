@@ -105,35 +105,6 @@ abstract class Go_Model extends CI_Model
         $this->_allowed_columns = $columns;
     }
 
-    protected function _data_to_entity(&$data, $class)
-    {
-        if($data === NULL)
-        {
-            return NULL;
-        }
-
-        $Go_Model = 'Go_Model';
-        $new_data = NULL;
-
-        // if it is already instance of the class
-        if($data instanceof $class)
-        {
-            return $data;
-        }
-        // if it is instance of Go_Model
-        else if($data instanceof $Go_Model)
-        {
-            $new_data = $data->as_array();
-        }
-        // array and other datatype
-        else if(!is_string($data))
-        {
-            $new_data = (array) $data;
-        }
-
-        return new $class($new_data, $this->db);
-    }
-
     public function __call($method, $parameter)
     {
         $mode = NULL;
@@ -171,7 +142,7 @@ abstract class Go_Model extends CI_Model
                 $accessed_relation_config = $this->_children[$accessed_relation];
                 $class_name = $accessed_relation_config['model'];
                 $backref_relation = $this->_get_backref_relation($accessed_relation);
-                $child = $this->_data_to_entity($parameter[0], $class_name);
+                $child = static::data_to_entity($parameter[0], $class_name, $this->db);
 
                 // real action, add or remove
                 if($mode == 'add')
@@ -201,7 +172,7 @@ abstract class Go_Model extends CI_Model
                 $pivot_config = $pivot_class::_get_static_config();
                 $virtual_child_class = $pivot_config['parents'][$relation]['model'];
 
-                $virtual_child = $this->_data_to_entity($parameter[0], $virtual_child_class);
+                $virtual_child = static::data_to_entity($parameter[0], $virtual_child_class, $this->db);
 
                 if($mode == 'add')
                 {
@@ -284,7 +255,7 @@ abstract class Go_Model extends CI_Model
                 foreach($child_config['parents'] as $alias=>$child_parent_config)
                 {
                     // this is the correct child config
-                    if($child_parent_config['model'] == get_called_class() && $child_parent_config['foreign_key'] == $foreign_key)
+                    if(trim($child_parent_config['model'], '\\') == trim(get_called_class(), '\\') && $child_parent_config['foreign_key'] == $foreign_key)
                     {
                         // get child list
                         $where = array($foreign_key => $this->_get_id());
@@ -375,7 +346,7 @@ abstract class Go_Model extends CI_Model
         }
 
         // create parent if not exist, or just simply return this val
-        $parent = $this->_data_to_entity($val, $class_name);
+        $parent = static::data_to_entity($val, $class_name, $this->db);
 
         // look for parent's children configuration refering to this model
         $backref_relation_name = $this->_get_backref_relation($relation_name);
@@ -1428,6 +1399,42 @@ abstract class Go_Model extends CI_Model
     protected static $_is_cachable = array(); // is cached_result allowed (i.e: record in the table less than 1000)
     protected static $_is_cached = array(); // is cached_result has been cached?
 
+    public static function data_to_entity(&$data, $class, $db = NULL)
+    {
+        if($data === NULL)
+        {
+            return NULL;
+        }
+
+        $Go_Model = 'Go_Model';
+        $new_data = NULL;
+
+        // if it is already instance of the class
+        if($data instanceof $class)
+        {
+            return $data;
+        }
+        // if it is instance of Go_Model
+        else if($data instanceof $Go_Model)
+        {
+            $new_data = $data->as_array();
+        }
+        // array and other datatype
+        else if(!is_string($data))
+        {
+            $new_data = (array) $data;
+        }
+
+        if($db == NULL)
+        {
+            $CI =& get_instance();
+            $db =& $CI->db;
+        }
+
+        return new $class($new_data, $db);
+    }
+
+
     protected static function _activate_cache()
     {
         $class = get_called_class();
@@ -1544,7 +1551,7 @@ abstract class Go_Model extends CI_Model
         self::$_is_cachable[$class] = FALSE;
     }
 
-    public static function get_cached_result(&$db = NULL)
+    public static function get_cached_result($db = NULL)
     {
         static::_activate_cache();
         $class = get_called_class();
@@ -1615,7 +1622,7 @@ abstract class Go_Model extends CI_Model
         return self::$_configs[$class];
     }
 
-    public static function find_all($limit=1000, $offset=0, &$db = NULL)
+    public static function find_all($limit=1000, $offset=0, $db = NULL)
     {
         // init db and get config
         $config = static::_get_static_config();
@@ -1653,7 +1660,7 @@ abstract class Go_Model extends CI_Model
         return $result;
     }
 
-    public static function find_by_id($id, &$db = NULL)
+    public static function find_by_id($id, $db = NULL)
     {
         // init db and get config
         $config = static::_get_static_config();
@@ -1669,7 +1676,7 @@ abstract class Go_Model extends CI_Model
     }
 
 
-    public static function find_where($key, $value = NULL, $escape = NULL, $limit=1000, $offset=0, &$db = NULL)
+    public static function find_where($key, $value = NULL, $escape = NULL, $limit=1000, $offset=0, $db = NULL)
     {
         // init db and get config
         $config = static::_get_static_config();
@@ -1767,7 +1774,7 @@ abstract class Go_Model extends CI_Model
         return static::result_to_object($query->result_array(), $db);
     }
 
-    protected static function &result_to_object($array_of_result, &$db)
+    protected static function &result_to_object($array_of_result, $db)
     {
         // get class name 
         $config = static::_get_static_config();

@@ -71,7 +71,7 @@ abstract class CMS_Model extends Go_Model
         }
     }
 
-    public function before_insert(&$success, &$message)
+    protected function before_insert(&$success, &$message)
     {
         if($this->_created_by != '' && $this->_user_model != '')
         {
@@ -84,7 +84,7 @@ abstract class CMS_Model extends Go_Model
         $this->_add_default_site();
     }
 
-    public function before_update(&$success, &$message)
+    protected function before_update(&$success, &$message)
     {
         if($this->_updated_by != '' && $this->_user_model != '')
         {
@@ -97,7 +97,7 @@ abstract class CMS_Model extends Go_Model
         $this->_add_default_site();
     }
 
-    public function before_delete(&$success, &$message)
+    protected function before_delete(&$success, &$message)
     {
         if($this->_deleted_by != '' && $this->_user_model != '')
         {

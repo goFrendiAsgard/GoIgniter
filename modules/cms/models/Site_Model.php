@@ -1,9 +1,11 @@
 <?php
 namespace Modules\Cms\Models;
+use \Modules\Cms\CMS_Module_Migrator;
 use \Modules\Cms\CMS_Model;
 use \Modules\Cms\Models\User_Model;
 use \Modules\Cms\Models\Site_Alias_Model;
 use \Modules\Cms\Models\Site_Module_Model;
+use \Modules\Cms\Models\Module_Model;
 use \Site;
 
 class Site_Model extends CMS_Model
@@ -51,6 +53,68 @@ class Site_Model extends CMS_Model
             }
         }
         return NULL;
+    }
+
+    public static function get_registered_modules($site = NULL)
+    {
+        // if no parameter, use current site
+        if($site == NULL)
+        {
+            $site = static::get_current_site();
+        }
+
+        // if site is null, all record in module table are "registered"
+        if($site == NULL)
+        {
+            // all modules 
+            return Module_Model::find_where(array(
+                'deleted' => FALSE,
+            ));
+        }
+        else
+        {
+            // current site's modules
+            return $site->modules;
+        }
+    }
+
+    public static function is_module_registered($module)
+    {
+        foreach(static::get_registered_modules() as $registered_module)
+        {
+            if($registered_module == $module || $registered_module->code == $module)
+            {
+                return TRUE;
+            }
+        }
+        return FALSE;
+    }
+
+    public static function register_module($module, $db = NULL)
+    {
+        $module = static::data_to_entity($module, '\Modules\Cms\Models\Module_Model', $db);
+        if(!static::is_module_registered($module))
+        {
+            $current_site = static::get_current_site();
+            if($current_site == NULL)
+            {
+                $module->save();
+            }
+            else
+            {
+                // get module from database
+                $module_list = Module_Model::find_where(array(
+                    'deleted' => FALSE,
+                    'code' => $module->code,
+                ));
+                if(count($module_list) > 0)
+                {
+                    $module = $module_list[0];
+                    $current_site->add_modules($module);
+                    $current_site->save();
+                }
+            }
+        }
     }
 
     protected function get_real_old_site_code()

@@ -34,4 +34,5 @@ class CMS_Module_Migrator extends \Module_Migrator
         $config = $this->migration_config;
         return MODULEPATH.$module.'/migrations/site';
     }
+
 }

@@ -17,4 +17,14 @@ class Module_Model extends CMS_Model
             'backref_relation' => 'module',
         ),
     );
+
+    protected function before_save(&$success, &$error_message)
+    {
+        $valid_module_list = get_available_modules();
+        if(!in_array($this->code, $valid_module_list))
+        {
+            $success = FALSE;
+            $error_message = 'Module '.$this->code.' does not exists';
+        }
+    } 
 }

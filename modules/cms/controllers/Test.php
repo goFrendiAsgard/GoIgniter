@@ -1029,11 +1029,30 @@ class Test extends Test_Controller
     function test_config_model()
     {
         $config = new Config_Model('my_config');
+        $config->value = 'my_value';
         $config->save();
 
         $expected_result = 'my_config';
         $test = $config->key;
-        $this->unit->run($test, $expected_result, 'Test create config');
+        $this->unit->run($test, $expected_result, 'Test key of created config');
+
+        $expected_result = 'my_value';
+        $test = $config->value;
+        $this->unit->run($test, $expected_result, 'Test value of created config');
+
+        $config->value = 'new_value';
+        $config->save();
+
+        $expected_result = 'new_value';
+        $test = $config->value;
+        $this->unit->run($test, $expected_result, 'Test change config key');
+
+        $config->restore();
+
+        $expected_result = 'my_value';
+        $test = $config->value;
+        $this->unit->run($test, $expected_result, 'Test restore config');
+
     }
 
     function test_layout_model()
@@ -1070,6 +1089,9 @@ class Test extends Test_Controller
 
     function test_site_model()
     {
+        // get cms_module (used for activation)
+        $cms_module = Module_Model::find_by_id(1);
+
         // delete all site
         $core_site = new Site();
         foreach($core_site->get_available_site_codes() as $code)
@@ -1112,7 +1134,22 @@ class Test extends Test_Controller
         $test = Site_Model::get_current_site()->id;
         $this->unit->run($test, $expected_result, 'Site current id should be 1');
 
+        // test before register
+        $expected_result = 0;
+        $test = count(Site_Model::get_registered_modules());
+        $this->unit->run($test, $expected_result, 'Cms module is not registered firstly');
+
+        // test after register
+        Site_Model::register_module($cms_module);
+        $expected_result = 1;
+        $test = count(Site_Model::get_registered_modules());
+        $this->unit->run($test, $expected_result, 'Cms module has been registered');
+
         $_SERVER['SERVER_NAME'] = $old_server_name;
+
+
+        // Try to activate module
+        Site_Model::register_module($cms_module);
     }
 
     function test_cms_module_migrator()
