@@ -35,4 +35,16 @@ class CMS_Module_Migrator extends \Module_Migrator
         return MODULEPATH.$module.'/migrations/site';
     }
 
+    public function migrate($module, $mode = 'latest', $version = NULL)
+    {
+        if(Site_Model::is_module_registered($module))
+        {
+            return parent::migrate($module, $mode, $version);
+        }
+        else
+        {
+            $this->migration_error[$module] = 'Migration of '.$module.' is not allowed';
+            return FALSE;
+        }
+    }
 }
