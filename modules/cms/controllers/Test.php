@@ -1193,6 +1193,8 @@ class Test extends Test_Controller
 
         // back to zero
         $cms_module_migrator->migrate_all('current');
+
+        // as main site
         $_SERVER['SERVER_NAME'] = $old_server_name;
 
         // prepare migration on main site
