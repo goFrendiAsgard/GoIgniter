@@ -44,13 +44,13 @@ class Module_Migrator extends CI_Model
         }
     }
 
-    protected function get_migration_table($module)
+    public function get_migration_table($module)
     {
         $config = $this->migration_config;
         return $config['migration_table'].'_'.$module;
     }
 
-    protected function get_migration_path($module)
+    public function get_migration_path($module)
     {
         $config = $this->migration_config;
         return MODULEPATH.$module.'/migrations';

@@ -10,6 +10,7 @@ use \Site;
 
 class Site_Model extends CMS_Model
 {
+    protected static $core_site; // instance of application/core/Site.php
     protected $_table = 'cms_site';
     protected $_site_id    = '';
     protected $_site_model = '';

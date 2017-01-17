@@ -5,7 +5,7 @@ use \Modules\Cms\Models\Site_Model;
 
 class CMS_Module_Migrator extends \Module_Migrator 
 {
-    protected function get_migration_table($module)
+    public function get_migration_table($module)
     {
         $table_suffix = '_invalid';
         // get current site code
@@ -17,7 +17,7 @@ class CMS_Module_Migrator extends \Module_Migrator
         else
         {
             $current_site_code = $site->get_current_code();
-            $site_list = Site_Model::find_where('code', $current_site_code);
+            $site_list = Site_Model::find_where(array('code' => $current_site_code, 'deleted' => FALSE));
             if(count($site_list) > 0)
             {
                 $current_site = $site_list[0];
@@ -29,7 +29,7 @@ class CMS_Module_Migrator extends \Module_Migrator
         return $config['migration_table'] . '_' . $module . $table_suffix;
     }
 
-    protected function get_migration_path($module)
+    public function get_migration_path($module)
     {
         $config = $this->migration_config;
         return MODULEPATH.$module.'/migrations/site';
@@ -39,6 +39,12 @@ class CMS_Module_Migrator extends \Module_Migrator
     {
         if(Site_Model::is_module_registered($module))
         {
+            // also migrate by using Module_Migrator mechanism
+            if($mode == 'latest')
+            {
+                $module_migrator = new \Module_Migrator();
+                $error = $module_migrator->migrate($module, $mode, $version);
+            }
             return parent::migrate($module, $mode, $version);
         }
         else
