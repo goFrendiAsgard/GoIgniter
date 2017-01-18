@@ -1161,6 +1161,13 @@ class Test extends Test_Controller
         $test = count(Site_Model::get_registered_modules());
         $this->unit->run($test, $expected_result, 'Cms module has been registered');
 
+        $content = new Content_Model('my_content');
+        $content->route_key = '/';
+        $content->save();
+        $expected_result = 1;
+        $test = $this->db->get_where('cms_content', array('site_id'=>1, 'code'=>'my_content'))->num_rows();
+        $this->unit->run($test, $expected_result, 'Add "my_content" content to site alpha. (We already have "my_content" content in main site)');
+
         $_SERVER['SERVER_NAME'] = $old_server_name;
 
     }

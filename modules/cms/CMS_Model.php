@@ -23,6 +23,7 @@ abstract class CMS_Model extends Go_Model
             }
         }
 
+        // add user related parents
         if($this->_user_model != '')
         {
             if($this->_created_by != '')
@@ -50,10 +51,17 @@ abstract class CMS_Model extends Go_Model
 
         if($this->_site_model != '')
         {
+            // add site as parent
             $this->_parents['site'] = array(
                 'model' => $this->_site_model,
                 'foreign_key' => $this->_site_id,
             );
+
+            // add site as unique key
+            if(!in_array($this->_site_id, $this->_unique_columns))
+            {
+                $this->_unique_columns[] = $this->_site_id;
+            }
         }
 
         $allowed_columns = parent::_set_allowed_columns();
@@ -61,18 +69,19 @@ abstract class CMS_Model extends Go_Model
 
     protected function _add_default_site()
     {
+        $site = new \Site();
+        $site_code = $site->get_current_code();
         if($this->_site_id != '' && $this->_site_model != '')
         {
-            if($this->__get('site') === NULL)
-            {
-                $current_site = $this->_site_model::get_current_site();
-                $this->__set('site', $current_site);
-            }
+            $class = $this->_site_model;
+            $current_site = $class::get_current_site();
+            $this->__set('site', $current_site);
         }
     }
 
     protected function before_insert(&$success, &$message)
     {
+        parent::before_insert($success, $message);
         if($this->_created_by != '' && $this->_user_model != '')
         {
             if($this->__get('creator') === NULL)
@@ -86,6 +95,7 @@ abstract class CMS_Model extends Go_Model
 
     protected function before_update(&$success, &$message)
     {
+        parent::before_update($success, $message);
         if($this->_updated_by != '' && $this->_user_model != '')
         {
             if($this->__get('updater') === NULL)
@@ -99,6 +109,7 @@ abstract class CMS_Model extends Go_Model
 
     protected function before_delete(&$success, &$message)
     {
+        parent::before_delete($success, $message);
         if($this->_deleted_by != '' && $this->_user_model != '')
         {
             if($this->__get('deleter') === NULL)

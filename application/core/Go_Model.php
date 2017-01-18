@@ -735,7 +735,7 @@ abstract class Go_Model extends CI_Model
         // if obj is string and we only have one unique column, let turn it into associative array with unique column as key and obj as val
         if(is_string($obj))
         {
-            if(count($this->_unique_columns) == 1)
+            if(count($this->_unique_columns) > 0)
             {
                 $unique_column = $this->_unique_columns[0];
                 $obj = array($unique_column => $obj);
@@ -887,6 +887,26 @@ abstract class Go_Model extends CI_Model
         // is this old_record?
         $is_old_record = $this->_is_old_record();
 
+        // trigger before insert/update
+        if($success)
+        {
+            // before update or before insert
+            if($is_old_record)
+            {
+                $this->before_update($success, $error_message);
+            }
+            else
+            {
+                $this->before_insert($success, $error_message);
+            }
+        }
+
+        // trigger before save
+        if($success)
+        {
+            $this->before_save($success, $error_message);
+        }
+
         // protect uniqueness 
         if(count($this->_unique_columns) > 0)
         {
@@ -932,26 +952,6 @@ abstract class Go_Model extends CI_Model
                     }
                 }
             }
-        }
-
-        // trigger before insert/update
-        if($success)
-        {
-            // before update or before insert
-            if($is_old_record)
-            {
-                $this->before_update($success, $error_message);
-            }
-            else
-            {
-                $this->before_insert($success, $error_message);
-            }
-        }
-
-        // trigger before save
-        if($success)
-        {
-            $this->before_save($success, $error_message);
         }
 
         // propagate parent
