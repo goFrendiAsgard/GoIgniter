@@ -1,3 +1,5 @@
+__NOTE:__ I'm now focusing on [Chimera-Framework](https://github.com/chimera-framework). It will be a more modern replacement of No-CMS
+
 # GoIgniter
 
 An attempt to extend CodeIgniter3 without breaking all the good things. You can play around with it before CodeIgniter4 is ready, and you can still play around with it after CodeIgniter4 is ready. By using GoIgniter, you can do cool stuff without breaking your current working code.
